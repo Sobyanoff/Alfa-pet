@@ -1,0 +1,15 @@
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# VSCode
+.vscode/
+
+# Environment / secrets
+.env
+.env.*
+*.key
+*.pem
+secrets.*
+config.local.*
