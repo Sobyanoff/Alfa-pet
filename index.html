@@ -163,15 +163,38 @@ function newMeeting() {
 }
 
 // ═══════════════════════════════════════════════════════
-//  РАСЧЁТ ВОЗНАГРАЖДЕНИЯ (формула 1-в-1 из бота)
+//  БС — ТИРАЖИРОВАННАЯ СТАВКА (по месячному итогу)
 // ═══════════════════════════════════════════════════════
-function calcEarnings(m) {
+function bsRate(totalBS) {
+  if (totalBS >= 21) return 570;
+  if (totalBS >= 11) return 430;
+  return 270;
+}
+
+function monthlyBSTotal() {
+  const now = new Date();
+  return history
+    .filter(h => h.AW === 'COMPLETED')
+    .filter(h => {
+      const p = h.date.split('.');
+      return +p[1] === now.getMonth() + 1 && +p[2] === now.getFullYear();
+    })
+    .reduce((s, h) => s + (h.AA || 0), 0);
+}
+
+// ═══════════════════════════════════════════════════════
+//  РАСЧЁТ ВОЗНАГРАЖДЕНИЯ
+// ═══════════════════════════════════════════════════════
+function calcEarnings(m, forceBSRate) {
+  const rate = forceBSRate !== undefined
+    ? forceBSRate
+    : bsRate(monthlyBSTotal() + (m.AA || 0));
   const r = (
     (m.E - m.M) * 250 + m.M * 310 +
     (m.O + m.P - m.Q) * 450 + m.Q * 570 +
     m.S * 100 + m.T * 270 + m.U * 270 +
-    m.X * 570 +   // КЛ/НДВ
-    m.Z * 270 + m.AA * 270 + m.AB * 20 +
+    m.X * 570 +
+    m.Z * 270 + m.AA * rate + m.AB * 20 +
     m.AC * 430 + m.AD * 270 + m.AE * 570 +
     m.AI * 310 + m.AJ * 430 + m.AK * 570 +
     m.AL * 10  + m.AM * 100 + m.AN * 430 +
@@ -299,27 +322,92 @@ function renderHome() {
   return root;
 }
 
+function legacyCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+}
+
 function renderDailyCard(mtgs) {
-  const t={count:mtgs.length};
-  const keys='E,O,P,Q,M,N,R,S,T,U,X,Z,AA,AB,AC,AD,AE,AF,AI,AJ,AK,AL,AM,AN,AO,AP,AQ,AR,AS,AT,AU,AV'.split(',');
-  keys.forEach(k=>{ t[k]=mtgs.reduce((s,m)=>s+(m[k]||0),0); });
-  const rows=[
-    ['Всего встреч', t.count],
-    ['ОК / DC-группа', t.E], ['  Акт.ДК', t.M], ['  ТР.ДК', t.N],
-    ['КК1', t.O], ['КК2', t.P], ['  Акт.КК', t.Q], ['  ТР.КК', t.R],
-    ['ФЗ КК1', t.S],
-    ['ИИС к ДК', t.T], ['ИИС к НБ', t.U], ['КЛ/НДВ', t.X],
-    ['Инвесткопилка', t.Z], ['БС', t.AA], ['ЦП', t.AB], ['Вок', t.AO],
-    ['Селфи N2B', t.AC], ['Селфи ВБ', t.AD], ['Селфи НБ', t.AE],
-    ['Уст.МП', t.AI], ['Кросс СИМ', t.AJ], ['НК', t.AK],
-    ['Куть', t.AL], ['Защитник', t.AM], ['Кросс Детская', t.AN],
-    ['Смарт', t.AQ], ['Уст.МП Х5', t.AR], ['ПДС', t.AS],
-    ['Пенсия', t.AT], ['Комбо 1½', t.AU], ['УП', t.AP],
-  ].filter(([,v])=>v>0||v==='Всего встреч');
+  const t = {count: mtgs.length};
+  const keys = 'E,O,P,Q,M,N,R,S,T,U,X,Z,AA,AB,AC,AD,AE,AF,AG,AI,AJ,AK,AL,AM,AN,AO,AP,AQ,AR,AS,AT,AU,AV'.split(',');
+  keys.forEach(k => { t[k] = mtgs.reduce((s, m) => s + (m[k] || 0), 0); });
+
+  const rows = [
+    ['Всего встреч',    t.count],
+    ['ДК',              t.E],
+    ['КК1',             t.O],
+    ['ТЗ КК1',          t.R],
+    ['ФЗ КК1',          t.S],
+    ['КДК к КК',        0],
+    ['ТЗ КДК',          0],
+    ['Комбо',           t.AU],
+    ['ТЗ Комбо',        0],
+    ['Комбо 1₽',        0],
+    ['ЦП',              t.AB],
+    ['БС',              t.AA],
+    ['Инвесткопилка',   t.Z],
+    ['Установка МП Х5', t.AR],
+    ['Селфи N2B',       t.AC],
+    ['Селфи OLD',       t.AD + t.AE],
+    ['ТЗ Селфи',        t.AG],
+    ['Кросс Кидс',      t.AN],
+    ['Кросс СИМ',       t.AJ],
+    ['Пенсия',          t.AT],
+    ['Смарт',           t.AQ],
+    ['ПДС',             t.AS],
+    ['Кэш',             0],
+    ['Вок на встрече',  t.AO],
+  ];
+
+  // Пересчёт итога по месячному тиру БС
+  const mBS = monthlyBSTotal();
+  const mRate = bsRate(mBS);
+  t.AV = mtgs.reduce((s, m) => s + calcEarnings(m, mRate), 0);
+
+  const fmt = v => v > 0 ? String(v) : '-';
 
   const c = card('Итог за сегодня');
-  rows.forEach(([l,v])=>c.append(rrow(l,v)));
-  c.append(el('div',{cls:'total'},`${t.AV}₽`));
+
+  // Индикатор тира БС
+  if (t.AA > 0) {
+    const tierLabel = mRate === 570 ? '🔥 БС тир 21+ → 570₽/шт'
+                    : mRate === 430 ? '⚡ БС тир 11–20 → 430₽/шт'
+                    :                 '📊 БС тир 1–10 → 270₽/шт';
+    const tierColor = mRate === 570 ? 'var(--success)' : mRate === 430 ? 'var(--warn)' : 'var(--muted)';
+    c.append(el('div', {
+      css: `font-size:12px;font-weight:600;color:${tierColor};margin-bottom:8px;padding:4px 8px;background:#f9fafb;border-radius:6px;display:inline-block`
+    }, `${tierLabel}  (всего в месяце: ${mBS} шт)`));
+  }
+
+  rows.forEach(([l, v]) => {
+    const row = rrow(l, fmt(v));
+    if (v === 0) row.style.opacity = '0.45';
+    c.append(row);
+  });
+  c.append(el('div', {cls: 'total'}, `${t.AV}₽`));
+
+  const copyBtn = btn('📋  Скопировать итог', () => {
+    const date = today();
+    let text = `📊 Отчёт за: ${date}\n\n`;
+    rows.forEach(([l, v]) => { text += `${l}: ${v > 0 ? v : '-'}\n`; });
+    text += `\nИтоговая сумма: ${t.AV}₽`;
+    if (t.AA > 0) text += `\n(БС тир: ${mRate}₽/шт, месяц: ${mBS} шт)`;
+
+    const done = () => {
+      copyBtn.textContent = '✅  Скопировано!';
+      setTimeout(() => { copyBtn.textContent = '📋  Скопировать итог'; }, 2000);
+    };
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(done).catch(() => { legacyCopy(text); done(); });
+    } else { legacyCopy(text); done(); }
+  }, 'btn-outline btn-full');
+
+  c.append(el('div', {css: 'margin-top:10px'}, copyBtn));
   return c;
 }
 
