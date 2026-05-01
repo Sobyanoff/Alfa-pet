@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alfa Tracker</title>
+  <style>
+    :root {
+      --red: #e31e24; --red-dark: #b71c1c; --red-light: #fdeaea;
+      --bg: #f0f2f5; --card: #fff; --text: #1a1a2e; --muted: #6b7280;
+      --border: #e5e7eb; --success: #16a34a; --warn: #d97706; --danger: #dc2626;
+      --radius: 10px; --shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+         background:var(--bg);min-height:100vh;color:var(--text);font-size:15px}
+
+    /* ── Header ── */
+    header{background:var(--red);color:#fff;padding:12px 16px;
+           display:flex;align-items:center;justify-content:space-between;
+           position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+    header h1{font-size:17px;font-weight:700;letter-spacing:.3px}
+    header .hdate{font-size:11px;opacity:.85;margin-top:1px}
+    .hback{background:transparent;border:1.5px solid rgba(255,255,255,.7);
+           color:#fff;border-radius:6px;padding:5px 10px;font-size:13px;
+           cursor:pointer;white-space:nowrap}
+    .hback:hover{background:rgba(255,255,255,.15)}
+
+    /* ── Layout ── */
+    .wrap{max-width:480px;margin:0 auto;padding:14px 12px 32px}
+
+    /* ── Card ── */
+    .card{background:var(--card);border-radius:var(--radius);padding:14px;
+          margin-bottom:10px;box-shadow:var(--shadow)}
+    .card-title{font-size:11px;font-weight:700;color:var(--muted);
+                text-transform:uppercase;letter-spacing:.6px;margin-bottom:11px}
+    .step-badge{display:inline-block;background:var(--red-light);color:var(--red);
+                font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;
+                margin-bottom:10px}
+    .card-desc{font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5}
+
+    /* ── Buttons ── */
+    .grid{display:grid;gap:7px}
+    .g2{grid-template-columns:1fr 1fr}
+    .g3{grid-template-columns:1fr 1fr 1fr}
+    .g1{grid-template-columns:1fr}
+    .btn{padding:11px 6px;border:2px solid var(--border);background:#f9fafb;
+         border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;
+         text-align:center;color:var(--text);transition:all .12s;line-height:1.3}
+    .btn:hover{background:#f1f5f9;border-color:#d1d5db}
+    .btn:active{transform:scale(.97)}
+    .btn-full{grid-column:1/-1}
+    .btn-red{background:var(--red);color:#fff;border-color:var(--red)}
+    .btn-red:hover{background:var(--red-dark);border-color:var(--red-dark)}
+    .btn-green{background:var(--success);color:#fff;border-color:var(--success)}
+    .btn-green:hover{background:#15803d}
+    .btn-outline{background:transparent;border-color:var(--red);color:var(--red)}
+    .btn-outline:hover{background:var(--red-light)}
+    .btn-gray{background:#6b7280;color:#fff;border-color:#6b7280}
+    .btn-gray:hover{background:#4b5563}
+    .btn-danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+    .btn-danger:hover{background:#b91c1c}
+    .btn-warn{background:var(--warn);color:#fff;border-color:var(--warn)}
+    .btn.on{border-color:var(--red);background:var(--red-light);color:var(--red)}
+    .btn-sm{padding:7px 10px;font-size:12px}
+
+    /* ── Result rows ── */
+    .rrow{display:flex;justify-content:space-between;padding:6px 0;
+          border-bottom:1px solid var(--border);font-size:14px}
+    .rrow:last-child{border-bottom:none}
+    .rlabel{color:var(--muted)}
+    .rval{font-weight:600}
+    .total{font-size:22px;font-weight:800;color:var(--red);
+           text-align:center;padding:10px 0 6px}
+
+    /* ── History ── */
+    .hi{padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
+    .hi:last-child{border-bottom:none}
+    .hi-top{display:flex;justify-content:space-between;margin-bottom:2px}
+    .hi-name{font-weight:600}
+    .hi-sum{color:var(--red);font-weight:700}
+    .hi-sub{color:var(--muted);font-size:12px}
+
+    /* ── Input ── */
+    input[type=text]{width:100%;padding:9px 12px;border:2px solid var(--border);
+                     border-radius:8px;font-size:14px;outline:none}
+    input[type=text]:focus{border-color:var(--red)}
+
+    .empty{text-align:center;color:var(--muted);padding:20px;font-size:13px}
+    .sep{height:1px;background:var(--border);margin:10px 0}
+
+    .fade{animation:fi .18s ease}
+    @keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+    /* ── Summary chip ── */
+    .chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+    .chip{background:#f1f5f9;border-radius:20px;padding:3px 10px;font-size:12px;
+          color:var(--text);border:1px solid var(--border)}
+    .chip.red{background:var(--red-light);color:var(--red);border-color:#fca5a5}
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Alfa Tracker</h1>
+    <div class="hdate" id="hdate"></div>
+  </div>
+  <button class="hback" onclick="goHome()">← Главная</button>
+</header>
+
+<div class="wrap"><div id="root" class="fade"></div></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  DATA MODEL
+// ═══════════════════════════════════════════════════════
+function newMeeting() {
+  return {
+    id: Date.now(), date: today(),
+    clientName: '',
+    // DC (дебетовые карты)
+    F:0,G:0,H:0,I:0,J:0,K:0,L:0,  // ОК,Х5,ИНВ,RE,СНВ,Семейный,ДК+Детская
+    E:0,  // sum DC
+    M:0, N:0,  // DC акт, ТР
+    // КК
+    O:0, P:0, Q:0, R:0,  // КК1,КК2, акт, ТР
+    // Сельхи (Self)
+    AC:0,AD:0,AE:0,  // n2b, ВБ, НБ
+    AF:0,AG:0,  // Self акт, ТР
+    // Специальные
+    AI:0,  // Установка МП
+    AK:0,  // НК
+    AP:0,  // УП / Отказ банка
+    // Кросс
+    X:0, Y:0,  // КЛ/НДВ выбран / с ТР+
+    T:0, V:0, W:0,  // ИИС к ДК: выбран, акт, ТР
+    U:0,  // ИИС к НБ
+    AJ:0, AN:0,  // Кросс СИМ, Кросс Детская
+    // Доп. продажи
+    Z:0,  // Инвесткопилка
+    AA:0, // БС
+    AB:0, // ЦП
+    AO:0, // Вок
+    S:0,  // ФЗ КК1
+    CO:0, // УП (кросс)
+    AL:0,AM:0,AQ:0,AR:0,AS:0,AT:0,AU:0, // прочие
+    // Приложение
+    AH:0, CL:0,
+    // Флаги
+    CM:0, CN:0,  // спец. продукт, отказ банка
+    // Статусы активации
+    AY:0,AZ:0,BA:0,BB:0,
+    // Доп. продукты
+    moreProduct1Type:null, moreProduct2Type:null,
+    // Тип выбранных продуктов (для отображения)
+    primaryType:null, crossType:null,
+    // Итог
+    AV:0,
+    // Текущий этап
+    AW:'OP'
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+//  РАСЧЁТ ВОЗНАГРАЖДЕНИЯ (формула 1-в-1 из бота)
+// ═══════════════════════════════════════════════════════
+function calcEarnings(m) {
+  const r = (
+    (m.E - m.M) * 250 + m.M * 310 +
+    (m.O + m.P - m.Q) * 450 + m.Q * 570 +
+    m.S * 100 + m.T * 270 + m.U * 270 +
+    m.X * 570 +   // КЛ/НДВ
+    m.Z * 270 + m.AA * 270 + m.AB * 20 +
+    m.AC * 430 + m.AD * 270 + m.AE * 570 +
+    m.AI * 310 + m.AJ * 430 + m.AK * 570 +
+    m.AL * 10  + m.AM * 100 + m.AN * 430 +
+    m.AP * 230 + m.AQ * 30 + m.AR * 0 +
+    m.AS * 270 + m.AT * 270 + m.AU * 30
+  ) * 0.87;
+  return Math.round(r);
+}
+
+// ═══════════════════════════════════════════════════════
+//  APP STATE
+// ═══════════════════════════════════════════════════════
+let meeting = null;
+let screen  = 'home';
+let history = JSON.parse(localStorage.getItem('alfa_h') || '[]');
+
+function saveHistory() { localStorage.setItem('alfa_h', JSON.stringify(history)); }
+function today() { return new Date().toLocaleDateString('ru-RU'); }
+
+function goHome()  { meeting = null; screen = 'home';    render(); }
+function startMtg(){ meeting = newMeeting(); screen = 'meeting'; render(); }
+
+function completeMtg() {
+  if (!meeting) return;
+  meeting.E  = meeting.F+meeting.G+meeting.H+meeting.I+meeting.J+meeting.K+meeting.L;
+  meeting.AV = calcEarnings(meeting);
+  meeting.AW = 'COMPLETED';
+  history.push({...meeting});
+  saveHistory();
+  screen = 'result';
+  render();
+}
+
+function setStage(s) { if (meeting) { meeting.AW = s; render(); } }
+
+// ═══════════════════════════════════════════════════════
+//  DOM HELPERS
+// ═══════════════════════════════════════════════════════
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs||{})) {
+    if (k==='cls') e.className=v;
+    else if (k==='on') e.onclick=v;
+    else if (k==='css') e.style.cssText=v;
+    else if (k==='html') e.innerHTML=v;
+    else e.setAttribute(k,v);
+  }
+  for (const k of kids) {
+    if (k==null) continue;
+    e.append(typeof k==='string' ? document.createTextNode(k) : k);
+  }
+  return e;
+}
+
+function btn(txt, onClick, cls='') {
+  return el('button',{cls:`btn ${cls}`,on:onClick},txt);
+}
+function grid(cols, btns) {
+  const g = el('div',{cls:`grid g${cols}`});
+  btns.filter(Boolean).forEach(b=>g.append(b));
+  return g;
+}
+function card(title, ...kids) {
+  const c = el('div',{cls:'card fade'});
+  if (title) c.append(el('div',{cls:'card-title'},title));
+  kids.filter(Boolean).forEach(k=>c.append(k));
+  return c;
+}
+function badge(txt) { return el('div',{cls:'step-badge'},txt); }
+function desc(txt)  { return el('p',{cls:'card-desc'},txt); }
+function rrow(lbl,val) {
+  return el('div',{cls:'rrow'},
+    el('span',{cls:'rlabel'},lbl),
+    el('span',{cls:'rval'},String(val)));
+}
+
+// ═══════════════════════════════════════════════════════
+//  SCREENS
+// ═══════════════════════════════════════════════════════
+
+/* ─── HOME ─── */
+function renderHome() {
+  const root = el('div',{});
+
+  // Hero
+  root.append(card(null,
+    el('div',{css:'text-align:center;padding:6px 0 2px'},
+      el('div',{css:'font-size:32px;margin-bottom:6px'},'📋'),
+      el('div',{css:'font-size:15px;font-weight:700;margin-bottom:3px'},'Alfa Meeting Tracker'),
+      el('div',{css:'font-size:12px;color:var(--muted);margin-bottom:14px'},
+        'Учёт продуктов · Расчёт вознаграждения'),
+      btn('▶  Начать встречу', startMtg, 'btn-red btn-full'),
+    )
+  ));
+
+  // Daily report
+  const todayMtgs = history.filter(m=>m.date===today()&&m.AW==='COMPLETED');
+  if (todayMtgs.length) root.append(renderDailyCard(todayMtgs));
+
+  // History
+  const done = history.filter(m=>m.AW==='COMPLETED').slice().reverse();
+  const hCard = card('История встреч');
+  if (!done.length) {
+    hCard.append(el('div',{cls:'empty'},'Встреч пока нет'));
+  } else {
+    done.slice(0,15).forEach(m=>{
+      const parts=[]; if(m.primaryType)parts.push(m.primaryType);
+      if(m.crossType)parts.push(m.crossType);
+      const t=el('div',{cls:'hi'});
+      const top=el('div',{cls:'hi-top'});
+      top.append(
+        el('span',{cls:'hi-name'},m.clientName||`${new Date(m.id).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}`),
+        el('span',{cls:'hi-sum'},`${m.AV}₽`)
+      );
+      t.append(top, el('div',{cls:'hi-sub'},`${m.date}  ·  ${parts.join(', ')||'—'}`));
+      hCard.append(t);
+    });
+    hCard.append(el('div',{css:'margin-top:10px'},
+      btn('🗑  Очистить всю историю', ()=>{
+        if(confirm('Удалить всю историю встреч?')){history=[];saveHistory();render();}
+      },'btn-danger btn-full btn-sm')
+    ));
+  }
+  root.append(hCard);
+  return root;
+}
+
+function renderDailyCard(mtgs) {
+  const t={count:mtgs.length};
+  const keys='E,O,P,Q,M,N,R,S,T,U,X,Z,AA,AB,AC,AD,AE,AF,AI,AJ,AK,AL,AM,AN,AO,AP,AQ,AR,AS,AT,AU,AV'.split(',');
+  keys.forEach(k=>{ t[k]=mtgs.reduce((s,m)=>s+(m[k]||0),0); });
+  const rows=[
+    ['Всего встреч', t.count],
+    ['ОК / DC-группа', t.E], ['  Акт.ДК', t.M], ['  ТР.ДК', t.N],
+    ['КК1', t.O], ['КК2', t.P], ['  Акт.КК', t.Q], ['  ТР.КК', t.R],
+    ['ФЗ КК1', t.S],
+    ['ИИС к ДК', t.T], ['ИИС к НБ', t.U], ['КЛ/НДВ', t.X],
+    ['Инвесткопилка', t.Z], ['БС', t.AA], ['ЦП', t.AB], ['Вок', t.AO],
+    ['Сельхи N2B', t.AC], ['Сельхи ВБ', t.AD], ['Сельхи НБ', t.AE],
+    ['Уст.МП', t.AI], ['Кросс СИМ', t.AJ], ['НК', t.AK],
+    ['Куть', t.AL], ['Защитник', t.AM], ['Кросс Детская', t.AN],
+    ['Смарт', t.AQ], ['Уст.МП Х5', t.AR], ['ПДС', t.AS],
+    ['Пенсия', t.AT], ['Комбо 1½', t.AU], ['УП', t.AP],
+  ].filter(([,v])=>v>0||v==='Всего встреч');
+
+  const c = card('Итог за сегодня');
+  rows.forEach(([l,v])=>c.append(rrow(l,v)));
+  c.append(el('div',{cls:'total'},`${t.AV}₽`));
+  return c;
+}
+
+/* ─── MEETING WRAPPER ─── */
+function renderMeeting() {
+  const m = meeting;
+  const root = el('div',{});
+
+  // Клиент (только на первом шаге)
+  if (m.AW==='OP') {
+    const nc=card('Клиент (необязательно)');
+    const inp=el('input',{type:'text',placeholder:'Имя клиента...',value:m.clientName});
+    inp.addEventListener('input',e=>m.clientName=e.target.value);
+    nc.append(inp);
+    root.append(nc);
+  }
+
+  const stage = m.AW;
+  const screenFns = {
+    'OP':              renderOP,
+    'DC_ACT_TR':       ()=>renderActTR('Активация / транзакция (ДК)',     handleDC),
+    'KK_ACT_TR':       ()=>renderActTR('Активация / транзакция (КК)',     handleKK),
+    'Self_ACT_TR':     ()=>renderActTR('Активация / транзакция (Сельхи)', handleSelf),
+    'CP':              renderCP,
+    'KL_ACT_TR':       ()=>renderTRonly('КЛ/НДВ — была транзакция?',      handleKL),
+    'KDK_ACT_TR':      ()=>renderActTR('Активация / транзакция (ИИС)',     handleKDK),
+    'Self_ACT_TR_2':   ()=>renderActTR('Активация / транзакция (Сельхи)', handleSelf2),
+    'Diff_ACT_TR':     ()=>renderActTR('Активация / транзакция (кросс)',   handleDiff),
+    'EXTRA_SALES_0':   renderES0,
+    'EXTRA_SALES_1':   renderES1,
+    'EXTRA_SALES_2':   renderES2,
+    'EXTRA_SALES_3':   renderES3,
+    'APP':             renderApp,
+    'AFTER_APP':       renderAfterApp,
+    'MORE_PRODUCT1':   ()=>renderMoreProduct(1),
+    'MORE_DC_ACT_TR_1':   ()=>renderActTR('Доп. продукт 1 (ДК)',     r=>handleMoreDC(1,r)),
+    'MORE_Self_ACT_TR_1': ()=>renderActTR('Доп. продукт 1 (Сельхи)', r=>handleMoreSelf(1,r)),
+    'MORE_Diff_ACT_TR_1': ()=>renderActTR('Доп. продукт 1',          r=>handleMoreDiff(1,r)),
+    'MORE_PRODUCT2':   ()=>renderMoreProduct(2),
+    'MORE_DC_ACT_TR_2':    ()=>renderActTR('Доп. продукт 2 (ДК)',     r=>handleMoreDC(2,r)),
+    'MORE_Selfe_ACT_TR_2': ()=>renderActTR('Доп. продукт 2 (Сельхи)', r=>handleMoreSelf(2,r)),
+    'MORE_Diff_ACT_TR_2':  ()=>renderActTR('Доп. продукт 2',          r=>handleMoreDiff(2,r)),
+  };
+
+  const fn = screenFns[stage];
+  if (fn) root.append(fn());
+
+  // Кнопки отмены (всегда снизу)
+  root.append(card(null,
+    grid(2,[
+      btn('🗑 Удалить встречу',()=>{
+        if(confirm('Сбросить текущую встречу?')){meeting=newMeeting();screen='meeting';render();}
+      },'btn-danger'),
+      btn('← Главная',()=>{
+        if(confirm('Вернуться? Данные встречи будут потеряны.')){goHome();}
+      },'btn-gray'),
+    ])
+  ));
+  return root;
+}
+
+/* ─── OP: Основной продукт ─── */
+function renderOP() {
+  const c=card('Основной продукт');
+  c.append(badge('Шаг 1 из 7'), desc('Выберите основной продукт встречи:'));
+
+  // DC группа
+  c.append(el('div',{cls:'card-title',css:'margin-top:6px;margin-bottom:6px'},'Дебетовые карты'));
+  c.append(grid(3,[
+    btn('ОК',    ()=>pickDC('ОК','F')),
+    btn('Х5',   ()=>pickDC('Х5','G')),
+    btn('ИНВ',  ()=>pickDC('ИНВ','H')),
+    btn('RE',   ()=>pickDC('RE','I')),
+    btn('СНВ',  ()=>pickDC('СНВ','J')),
+    btn('Семейный',()=>pickDC('Семейный','K')),
+  ]));
+  c.append(el('div',{css:'margin-top:7px'},
+    grid(1,[btn('ДК + Детская',()=>pickDC('ДК+Детская','L',2),'btn-full')])
+  ));
+
+  // КК группа
+  c.append(el('div',{cls:'card-title',css:'margin-top:12px;margin-bottom:6px'},'Кредитные карты'));
+  c.append(grid(2,[
+    btn('КК1', ()=>pickKK('КК1','O')),
+    btn('КК2', ()=>pickKK('КК2','P')),
+  ]));
+
+  // Сельхи
+  c.append(el('div',{cls:'card-title',css:'margin-top:12px;margin-bottom:6px'},'Сельхи'));
+  c.append(grid(3,[
+    btn('n2b',  ()=>pickSelf('Сельхи n2b','AC')),
+    btn('ВБ',   ()=>pickSelf('Сельхи ВБ','AD')),
+    btn('НБ',   ()=>pickSelf('Сельхи НБ','AE')),
+  ]));
+
+  // Специальные
+  c.append(el('div',{cls:'card-title',css:'margin-top:12px;margin-bottom:6px'},'Специальные'));
+  c.append(grid(2,[
+    btn('НК',          ()=>pickSpecial('НК','AK')),
+    btn('Установка МП',()=>pickSpecial('Установка МП','AI')),
+  ]));
+  c.append(el('div',{css:'margin-top:7px'},
+    btn('Отказ банка',()=>pickRefusal(),'btn-danger btn-full')
+  ));
+  return c;
+}
+
+function pickDC(name,col,count=1) {
+  meeting[col]=(meeting[col]||0)+count;
+  meeting.primaryType=name;
+  meeting.AW='DC_ACT_TR'; render();
+}
+function pickKK(name,col) {
+  meeting[col]=(meeting[col]||0)+1;
+  meeting.primaryType=name;
+  meeting.AW='KK_ACT_TR'; render();
+}
+function pickSelf(name,col) {
+  meeting[col]=(meeting[col]||0)+1;
+  meeting.primaryType=name;
+  meeting.AW='Self_ACT_TR'; render();
+}
+function pickSpecial(name,col) {
+  meeting[col]=(meeting[col]||0)+1;
+  meeting.primaryType=name;
+  meeting.CM=1;
+  meeting.AW='AFTER_APP'; render();
+}
+function pickRefusal() {
+  meeting.AP=1; meeting.CN=1; meeting.CM=1;
+  meeting.primaryType='Отказ банка';
+  meeting.AW='AFTER_APP'; render();
+}
+
+/* ─── Активация / Транзакция ─── */
+function renderActTR(title, callback) {
+  const c=card(title);
+  c.append(desc('Сделал активацию и транзакцию по продукту?'));
+  c.append(grid(3,[
+    btn('АК+ ТР+', ()=>callback('АК+ ТР+'), 'btn-green'),
+    btn('АК+ ТР-', ()=>callback('АК+ ТР-'), 'btn-warn'),
+    btn('А+',      ()=>callback('А+'),      ''),
+  ]));
+  return c;
+}
+function renderTRonly(title, callback) {
+  const c=card(title);
+  c.append(desc('Была транзакция?'));
+  c.append(grid(2,[
+    btn('ТР+', ()=>callback('ТР+'), 'btn-green'),
+    btn('ТР-', ()=>callback('ТР-'), ''),
+  ]));
+  return c;
+}
+
+function handleDC(r) {
+  if(r==='АК+ ТР+'){ meeting.M++; meeting.N++; meeting.AY=2; }
+  else if(r==='АК+ ТР-'){ meeting.M++; meeting.AY=1; }
+  else meeting.AY=0;
+  meeting.AW='CP'; render();
+}
+function handleKK(r) {
+  if(r==='АК+ ТР+'){ meeting.Q++; meeting.R++; meeting.AY=2; }
+  else if(r==='АК+ ТР-'){ meeting.Q++; meeting.AY=1; }
+  else meeting.AY=0;
+  meeting.AW='CP'; render();
+}
+function handleSelf(r) {
+  if(r==='АК+ ТР+'){ meeting.AF++; meeting.AG++; meeting.AY=2; }
+  else if(r==='АК+ ТР-'){ meeting.AF++; meeting.AY=1; }
+  else meeting.AY=0;
+  meeting.AW='CP'; render();
+}
+function handleKL(r) {
+  if(r==='ТР+'){ meeting.Y++; meeting.AZ=2; }
+  else meeting.AZ=0;
+  meeting.AW='EXTRA_SALES_0'; render();
+}
+function handleKDK(r) {
+  if(r==='АК+ ТР+'){ meeting.V++; meeting.W++; meeting.AZ=2; }
+  else if(r==='АК+ ТР-'){ meeting.V++; meeting.AZ=1; }
+  else meeting.AZ=0;
+  meeting.AW='EXTRA_SALES_0'; render();
+}
+function handleSelf2(r) {
+  if(r==='АК+ ТР+'){ meeting.AF++; meeting.AG++; meeting.AZ=2; }
+  else if(r==='АК+ ТР-'){ meeting.AF++; meeting.AZ=1; }
+  else meeting.AZ=0;
+  meeting.AW='EXTRA_SALES_0'; render();
+}
+function handleDiff(r) {
+  if(r==='АК+ ТР+') meeting.AZ=2;
+  else if(r==='АК+ ТР-') meeting.AZ=1;
+  else meeting.AZ=0;
+  meeting.AW='EXTRA_SALES_0'; render();
+}
+
+/* ─── CP: Кросс продукт ─── */
+function renderCP() {
+  const c=card('Кросс продукт');
+  c.append(badge('Шаг 2 из 7'), desc('Выберите кросс продукт:'));
+  c.append(grid(2,[
+    btn('КЛ / НДВ',       ()=>pickCrossKL()),
+    btn('ИИС к ДК',       ()=>pickCrossKDK('T','ИИС к ДК')),
+    btn('ИИС к НБ',       ()=>pickCrossKDK('U','ИИС к НБ')),
+    btn('Сельхи n2b',     ()=>pickCrossSelf('AC','Сельхи n2b')),
+    btn('Сельхи ВБ',      ()=>pickCrossSelf('AD','Сельхи ВБ')),
+    btn('Сельхи НБ',      ()=>pickCrossSelf('AE','Сельхи НБ')),
+    btn('Кросс СИМ',      ()=>pickCrossDiff('AJ','Кросс СИМ')),
+    btn('Кросс Детская',  ()=>pickCrossDiff('AN','Кросс Детская')),
+  ]));
+  c.append(el('div',{css:'margin-top:8px'},
+    btn('Пропустить →', ()=>{ meeting.AW='EXTRA_SALES_0'; render(); }, 'btn-gray btn-full')
+  ));
+  return c;
+}
+function pickCrossKL() {
+  meeting.X++; meeting.crossType='КЛ/НДВ'; meeting.AW='KL_ACT_TR'; render();
+}
+function pickCrossKDK(col,name) {
+  meeting[col]=(meeting[col]||0)+1; meeting.crossType=name; meeting.AW='KDK_ACT_TR'; render();
+}
+function pickCrossSelf(col,name) {
+  meeting[col]=(meeting[col]||0)+1; meeting.crossType=name; meeting.AW='Self_ACT_TR_2'; render();
+}
+function pickCrossDiff(col,name) {
+  meeting[col]=(meeting[col]||0)+1; meeting.crossType=name; meeting.AW='Diff_ACT_TR'; render();
+}
+
+/* ─── EXTRA SALES ─── */
+function renderES0() {
+  const c=card('Доп. продажи');
+  c.append(badge('Шаг 3 из 7'), desc('БС или Инвесткопилка?'));
+  c.append(grid(1,[
+    btn('БС (покупка от 1 000₽)',          ()=>{ meeting.AA=1; meeting.AW='EXTRA_SALES_1'; render(); },'btn-full'),
+    btn('Инвесткопилка (пополнение от 2 500₽)', ()=>{ meeting.Z=1;  meeting.AW='EXTRA_SALES_1'; render(); },'btn-full'),
+    btn('—  Ни то, ни другое',             ()=>{ meeting.AW='EXTRA_SALES_1'; render(); },'btn-gray btn-full'),
+  ]));
+  return c;
+}
+
+function renderES1() {
+  const c=card('Доп. продажи');
+  c.append(badge('Шаг 4 из 7'), desc('ЦП или Вок?'));
+  c.append(grid(2,[
+    btn('ЦП',  ()=>{ meeting.AB=1; meeting.AW='EXTRA_SALES_2'; render(); }),
+    btn('Вок', ()=>{ meeting.AO=1; meeting.AW='EXTRA_SALES_2'; render(); }),
+  ]));
+  c.append(el('div',{css:'margin-top:7px'},
+    btn('ЦП и Вок', ()=>{ meeting.AB=1; meeting.AO=1; meeting.AW='EXTRA_SALES_2'; render(); },'btn-full')
+  ));
+  c.append(el('div',{css:'margin-top:7px'},
+    btn('—  Пропустить', ()=>{ meeting.AW='EXTRA_SALES_2'; render(); },'btn-gray btn-full')
+  ));
+  return c;
+}
+
+function renderES2() {
+  const m=meeting;
+  const c=card('Доп. продажи');
+  c.append(badge('Шаг 5 из 7'), desc('Отметьте дополнительные продукты (можно несколько):'));
+  const items=[
+    ['Смарт','AQ'],['Комбо 1½','AU'],['Куть','AL'],
+    ['Защитник','AM'],['ПДС','AS'],['Пенсия','AT'],['Уст.МП Х5','AR'],
+  ];
+  const g=el('div',{cls:'grid g3'});
+  items.forEach(([lbl,col])=>{
+    g.append(btn(lbl,()=>{ m[col]=m[col]?0:1; render(); }, m[col]?'on':''));
+  });
+  c.append(g);
+  c.append(el('div',{css:'margin-top:10px'},
+    btn('Далее →', gotoES3, 'btn-red btn-full')
+  ));
+  return c;
+}
+
+function gotoES3() {
+  const isKK = (meeting.O||0)>0 || (meeting.P||0)>0;
+  if (isKK) { meeting.AW='EXTRA_SALES_3'; render(); }
+  else if (meeting.CM) { meeting.AW='AFTER_APP'; render(); }
+  else { meeting.AW='APP'; render(); }
+}
+
+function renderES3() {
+  const c=card('Доп. продажи (КК)');
+  c.append(badge('Шаг 6 из 7'), desc('ФЗ КК1 или УП?'));
+  c.append(grid(2,[
+    btn('ФЗ КК1', ()=>{ meeting.S=1; afterES3(); }),
+    btn('УП',     ()=>{ meeting.AP=1; meeting.CO=1; afterES3(); }),
+  ]));
+  c.append(el('div',{css:'margin-top:7px'},
+    btn('ФЗ КК1 и УП', ()=>{ meeting.S=1; meeting.AP=1; meeting.CO=1; afterES3(); },'btn-full')
+  ));
+  c.append(el('div',{css:'margin-top:7px'},
+    btn('—  Пропустить', afterES3, 'btn-gray btn-full')
+  ));
+  return c;
+}
+function afterES3() {
+  if (meeting.CM) { meeting.AW='AFTER_APP'; render(); }
+  else { meeting.AW='APP'; render(); }
+}
+
+/* ─── APP Installation ─── */
+function renderApp() {
+  const c=card('Установка приложения');
+  c.append(badge('Шаг 7 из 7'), desc('Установили приложение Альфа-Банк?'));
+  c.append(grid(2,[
+    btn('Android  ✓', ()=>{ meeting.CL=1; meeting.AH=1; meeting.AW='AFTER_APP'; render(); },'btn-green'),
+    btn('Android  ✗', ()=>{ meeting.CL=1; meeting.AH=0; meeting.AW='AFTER_APP'; render(); }),
+    btn('iPhone  ✓',  ()=>{ meeting.CL=0; meeting.AH=1; meeting.AW='AFTER_APP'; render(); },'btn-green'),
+    btn('iPhone  ✗',  ()=>{ meeting.CL=0; meeting.AH=0; meeting.AW='AFTER_APP'; render(); }),
+  ]));
+  return c;
+}
+
+/* ─── AFTER APP: завершение / доп. продукты ─── */
+function renderAfterApp() {
+  const m=meeting;
+  const c=card('Встреча завершена?');
+
+  // Мини-сводка
+  const chips=el('div',{cls:'chips'});
+  if(m.primaryType) chips.append(el('span',{cls:'chip red'},`📌 ${m.primaryType}`));
+  if(m.crossType)   chips.append(el('span',{cls:'chip'},`🔗 ${m.crossType}`));
+  if(m.moreProduct1Type) chips.append(el('span',{cls:'chip'},`➕ ${m.moreProduct1Type}`));
+  if(m.moreProduct2Type) chips.append(el('span',{cls:'chip'},`➕ ${m.moreProduct2Type}`));
+  const extras=[];
+  if(m.AA)extras.push('БС'); if(m.Z)extras.push('Инвест.'); if(m.AB)extras.push('ЦП');
+  if(m.AO)extras.push('Вок'); if(m.S)extras.push('ФЗ КК1'); if(m.CO)extras.push('УП');
+  if(m.AL)extras.push('Куть'); if(m.AM)extras.push('Защитник'); if(m.AQ)extras.push('Смарт');
+  if(m.AS)extras.push('ПДС'); if(m.AT)extras.push('Пенсия'); if(m.AU)extras.push('Комбо 1½');
+  extras.forEach(e=>chips.append(el('span',{cls:'chip'},e)));
+  if(chips.children.length) c.append(chips);
+
+  c.append(el('div',{css:'margin-bottom:7px'},
+    btn('✅  Завершить встречу', completeMtg, 'btn-red btn-full')
+  ));
+
+  // Ещё продукт (только если не было 2 доп. продукта)
+  if (!m.moreProduct1Type) {
+    c.append(el('div',{css:'margin-bottom:7px'},
+      btn('➕  Ещё продукт', ()=>{ meeting.AW='MORE_PRODUCT1'; render(); },'btn-outline btn-full')
+    ));
+  } else if (!m.moreProduct2Type) {
+    c.append(el('div',{css:'margin-bottom:7px'},
+      btn('➕  Добавить ещё', ()=>{ meeting.AW='MORE_PRODUCT2'; render(); },'btn-outline btn-full')
+    ));
+  }
+
+  // Если спец. продукт — показываем «Продажи»
+  if (m.CM && !m.primaryType?.includes('Отказ')) {
+    c.append(el('div',{css:'margin-bottom:7px'},
+      btn('💼  Доп. продажи', ()=>{ meeting.AW='EXTRA_SALES_0'; render(); },'btn-outline btn-full')
+    ));
+  }
+
+  return c;
+}
+
+/* ─── MORE PRODUCTS ─── */
+function renderMoreProduct(num) {
+  const c=card(`Дополнительный продукт ${num}`);
+  c.append(desc(`Выберите ${num===1?'первый':'второй'} дополнительный продукт:`));
+  c.append(grid(3,[
+    btn('ОК',            ()=>pickMore(num,'ОК','F','dc')),
+    btn('Х5',           ()=>pickMore(num,'Х5','G','dc')),
+    btn('Сельхи n2b',   ()=>pickMore(num,'Сельхи n2b','AC','self')),
+    btn('Сельхи ВБ',    ()=>pickMore(num,'Сельхи ВБ','AD','self')),
+    btn('Сельхи НБ',    ()=>pickMore(num,'Сельхи НБ','AE','self')),
+    btn('Кросс СИМ',    ()=>pickMore(num,'Кросс СИМ','AJ','diff')),
+    btn('Кросс Детская',()=>pickMore(num,'Кросс Детская','AN','diff')),
+  ]));
+  return c;
+}
+function pickMore(num,name,col,type) {
+  meeting[col]=(meeting[col]||0)+1;
+  if(num===1){ meeting.moreProduct1Type=name; }
+  else       { meeting.moreProduct2Type=name; }
+  const stageMap = { dc:'MORE_DC_ACT_TR_', self:'MORE_Self_ACT_TR_', diff:'MORE_Diff_ACT_TR_' };
+  const suffix = num===1 ? '1' : (type==='self' ? '2' : '2');
+  // Map exact stage keys
+  const exact = {
+    dc:   { 1:'MORE_DC_ACT_TR_1',    2:'MORE_DC_ACT_TR_2'    },
+    self: { 1:'MORE_Self_ACT_TR_1',  2:'MORE_Selfe_ACT_TR_2' },
+    diff: { 1:'MORE_Diff_ACT_TR_1',  2:'MORE_Diff_ACT_TR_2'  },
+  };
+  meeting.AW = exact[type][num];
+  render();
+}
+
+function handleMoreDC(num,r) {
+  if(r==='АК+ ТР+'){ meeting.M++; meeting.N++; num===1?(meeting.BA=2):(meeting.BB=2); }
+  else if(r==='АК+ ТР-'){ meeting.M++; num===1?(meeting.BA=1):(meeting.BB=1); }
+  afterMore(num);
+}
+function handleMoreSelf(num,r) {
+  if(r==='АК+ ТР+'){ meeting.AF++; meeting.AG++; num===1?(meeting.BA=2):(meeting.BB=2); }
+  else if(r==='АК+ ТР-'){ meeting.AF++; num===1?(meeting.BA=1):(meeting.BB=1); }
+  afterMore(num);
+}
+function handleMoreDiff(num,r) {
+  if(r==='АК+ ТР+') num===1?(meeting.BA=2):(meeting.BB=2);
+  else if(r==='АК+ ТР-') num===1?(meeting.BA=1):(meeting.BB=1);
+  afterMore(num);
+}
+function afterMore(num) {
+  meeting.AW='AFTER_APP'; render();
+}
+
+/* ─── RESULT ─── */
+function renderResult() {
+  const m = history[history.length-1];
+  if (!m) { goHome(); return el('div',{}); }
+  const root=el('div',{});
+  const act=v=>v===2?'АК+ ТР+':v===1?'АК+ ТР-':'А+';
+
+  const sc=card('Результат встречи');
+  sc.append(el('div',{cls:'total'},`${m.AV} ₽`));
+  if(m.clientName) sc.append(rrow('Клиент', m.clientName));
+  sc.append(rrow('Дата', m.date));
+  if(m.primaryType) sc.append(rrow('Основной продукт', `${m.primaryType}  ·  ${act(m.AY)}`));
+  if(m.crossType)   sc.append(rrow('Кросс продукт',    `${m.crossType}  ·  ${act(m.AZ)}`));
+  if(m.moreProduct1Type) sc.append(rrow('Доп. продукт 1', `${m.moreProduct1Type}  ·  ${act(m.BA)}`));
+  if(m.moreProduct2Type) sc.append(rrow('Доп. продукт 2', `${m.moreProduct2Type}  ·  ${act(m.BB)}`));
+  root.append(sc);
+
+  // Доп. продажи
+  const extras=[];
+  if(m.AA) extras.push('💰 БС (покупка)');
+  if(m.Z)  extras.push('💼 Инвесткопилка');
+  if(m.AB) extras.push('💳 ЦП');
+  if(m.AO) extras.push('📱 Вок');
+  if(m.S)  extras.push('🏷 ФЗ КК1');
+  if(m.CO) extras.push('✅ УП');
+  if(m.AL) extras.push('🛒 Куть');
+  if(m.AM) extras.push('🛡 Защитник');
+  if(m.AQ) extras.push('💡 Смарт');
+  if(m.AR) extras.push('📲 Уст.МП Х5');
+  if(m.AS) extras.push('📊 ПДС');
+  if(m.AT) extras.push('👴 Пенсия');
+  if(m.AU) extras.push('📦 Комбо 1½');
+  if(extras.length) {
+    const ec=card('Дополнительные продажи');
+    extras.forEach(e=>ec.append(el('div',{css:'padding:4px 0;font-size:13px'},e)));
+    root.append(ec);
+  }
+
+  // Приложение
+  const apc=card('Приложение');
+  apc.append(rrow(m.CL===1?'Android':'iPhone', m.AH===1?'✓ Установлено':'✗ Не установлено'));
+  root.append(apc);
+
+  root.append(card(null,
+    grid(1,[
+      btn('▶  Новая встреча', startMtg, 'btn-red btn-full'),
+      btn('← Главная',       goHome,   'btn-outline btn-full'),
+    ])
+  ));
+  return root;
+}
+
+// ═══════════════════════════════════════════════════════
+//  MAIN RENDER
+// ═══════════════════════════════════════════════════════
+function render() {
+  const root=document.getElementById('root');
+  root.innerHTML='';
+  root.className='fade';
+  let node;
+  if      (screen==='home')    node=renderHome();
+  else if (screen==='meeting') node=renderMeeting();
+  else if (screen==='result')  node=renderResult();
+  else                         node=renderHome();
+  root.append(node);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+document.getElementById('hdate').textContent =
+  new Date().toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
+
+render();
+</script>
+</body>
+</html>
