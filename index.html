@@ -125,7 +125,7 @@ function newMeeting() {
     M:0, N:0,  // DC акт, ТР
     // КК
     O:0, P:0, Q:0, R:0,  // КК1,КК2, акт, ТР
-    // Сельхи (Self)
+    // Селфи (Self)
     AC:0,AD:0,AE:0,  // n2b, ВБ, НБ
     AF:0,AG:0,  // Self акт, ТР
     // Специальные
@@ -310,7 +310,7 @@ function renderDailyCard(mtgs) {
     ['ФЗ КК1', t.S],
     ['ИИС к ДК', t.T], ['ИИС к НБ', t.U], ['КЛ/НДВ', t.X],
     ['Инвесткопилка', t.Z], ['БС', t.AA], ['ЦП', t.AB], ['Вок', t.AO],
-    ['Сельхи N2B', t.AC], ['Сельхи ВБ', t.AD], ['Сельхи НБ', t.AE],
+    ['Селфи N2B', t.AC], ['Селфи ВБ', t.AD], ['Селфи НБ', t.AE],
     ['Уст.МП', t.AI], ['Кросс СИМ', t.AJ], ['НК', t.AK],
     ['Куть', t.AL], ['Защитник', t.AM], ['Кросс Детская', t.AN],
     ['Смарт', t.AQ], ['Уст.МП Х5', t.AR], ['ПДС', t.AS],
@@ -342,11 +342,11 @@ function renderMeeting() {
     'OP':              renderOP,
     'DC_ACT_TR':       ()=>renderActTR('Активация / транзакция (ДК)',     handleDC),
     'KK_ACT_TR':       ()=>renderActTR('Активация / транзакция (КК)',     handleKK),
-    'Self_ACT_TR':     ()=>renderActTR('Активация / транзакция (Сельхи)', handleSelf),
+    'Self_ACT_TR':     ()=>renderActTR('Активация / транзакция (Селфи)', handleSelf),
     'CP':              renderCP,
     'KL_ACT_TR':       ()=>renderTRonly('КЛ/НДВ — была транзакция?',      handleKL),
     'KDK_ACT_TR':      ()=>renderActTR('Активация / транзакция (ИИС)',     handleKDK),
-    'Self_ACT_TR_2':   ()=>renderActTR('Активация / транзакция (Сельхи)', handleSelf2),
+    'Self_ACT_TR_2':   ()=>renderActTR('Активация / транзакция (Селфи)', handleSelf2),
     'Diff_ACT_TR':     ()=>renderActTR('Активация / транзакция (кросс)',   handleDiff),
     'EXTRA_SALES_0':   renderES0,
     'EXTRA_SALES_1':   renderES1,
@@ -356,11 +356,11 @@ function renderMeeting() {
     'AFTER_APP':       renderAfterApp,
     'MORE_PRODUCT1':   ()=>renderMoreProduct(1),
     'MORE_DC_ACT_TR_1':   ()=>renderActTR('Доп. продукт 1 (ДК)',     r=>handleMoreDC(1,r)),
-    'MORE_Self_ACT_TR_1': ()=>renderActTR('Доп. продукт 1 (Сельхи)', r=>handleMoreSelf(1,r)),
+    'MORE_Self_ACT_TR_1': ()=>renderActTR('Доп. продукт 1 (Селфи)', r=>handleMoreSelf(1,r)),
     'MORE_Diff_ACT_TR_1': ()=>renderActTR('Доп. продукт 1',          r=>handleMoreDiff(1,r)),
     'MORE_PRODUCT2':   ()=>renderMoreProduct(2),
     'MORE_DC_ACT_TR_2':    ()=>renderActTR('Доп. продукт 2 (ДК)',     r=>handleMoreDC(2,r)),
-    'MORE_Selfe_ACT_TR_2': ()=>renderActTR('Доп. продукт 2 (Сельхи)', r=>handleMoreSelf(2,r)),
+    'MORE_Selfe_ACT_TR_2': ()=>renderActTR('Доп. продукт 2 (Селфи)', r=>handleMoreSelf(2,r)),
     'MORE_Diff_ACT_TR_2':  ()=>renderActTR('Доп. продукт 2',          r=>handleMoreDiff(2,r)),
   };
 
@@ -407,12 +407,12 @@ function renderOP() {
     btn('КК2', ()=>pickKK('КК2','P')),
   ]));
 
-  // Сельхи
-  c.append(el('div',{cls:'card-title',css:'margin-top:12px;margin-bottom:6px'},'Сельхи'));
+  // Селфи
+  c.append(el('div',{cls:'card-title',css:'margin-top:12px;margin-bottom:6px'},'Селфи'));
   c.append(grid(3,[
-    btn('n2b',  ()=>pickSelf('Сельхи n2b','AC')),
-    btn('ВБ',   ()=>pickSelf('Сельхи ВБ','AD')),
-    btn('НБ',   ()=>pickSelf('Сельхи НБ','AE')),
+    btn('n2b',  ()=>pickSelf('Селфи n2b','AC')),
+    btn('ВБ',   ()=>pickSelf('Селфи ВБ','AD')),
+    btn('НБ',   ()=>pickSelf('Селфи НБ','AE')),
   ]));
 
   // Специальные
@@ -525,9 +525,9 @@ function renderCP() {
     btn('КЛ / НДВ',       ()=>pickCrossKL()),
     btn('ИИС к ДК',       ()=>pickCrossKDK('T','ИИС к ДК')),
     btn('ИИС к НБ',       ()=>pickCrossKDK('U','ИИС к НБ')),
-    btn('Сельхи n2b',     ()=>pickCrossSelf('AC','Сельхи n2b')),
-    btn('Сельхи ВБ',      ()=>pickCrossSelf('AD','Сельхи ВБ')),
-    btn('Сельхи НБ',      ()=>pickCrossSelf('AE','Сельхи НБ')),
+    btn('Селфи n2b',     ()=>pickCrossSelf('AC','Селфи n2b')),
+    btn('Селфи ВБ',      ()=>pickCrossSelf('AD','Селфи ВБ')),
+    btn('Селфи НБ',      ()=>pickCrossSelf('AE','Селфи НБ')),
     btn('Кросс СИМ',      ()=>pickCrossDiff('AJ','Кросс СИМ')),
     btn('Кросс Детская',  ()=>pickCrossDiff('AN','Кросс Детская')),
   ]));
@@ -687,9 +687,9 @@ function renderMoreProduct(num) {
   c.append(grid(3,[
     btn('ОК',            ()=>pickMore(num,'ОК','F','dc')),
     btn('Х5',           ()=>pickMore(num,'Х5','G','dc')),
-    btn('Сельхи n2b',   ()=>pickMore(num,'Сельхи n2b','AC','self')),
-    btn('Сельхи ВБ',    ()=>pickMore(num,'Сельхи ВБ','AD','self')),
-    btn('Сельхи НБ',    ()=>pickMore(num,'Сельхи НБ','AE','self')),
+    btn('Селфи n2b',   ()=>pickMore(num,'Селфи n2b','AC','self')),
+    btn('Селфи ВБ',    ()=>pickMore(num,'Селфи ВБ','AD','self')),
+    btn('Селфи НБ',    ()=>pickMore(num,'Селфи НБ','AE','self')),
     btn('Кросс СИМ',    ()=>pickMore(num,'Кросс СИМ','AJ','diff')),
     btn('Кросс Детская',()=>pickMore(num,'Кросс Детская','AN','diff')),
   ]));
