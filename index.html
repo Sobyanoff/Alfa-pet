@@ -106,7 +106,7 @@
     <h1>Alfa Tracker</h1>
     <div class="hdate" id="hdate"></div>
   </div>
-  <button class="hback" onclick="goHome()">← Главная</button>
+  <button class="hback" onclick="goBack()">← Назад</button>
 </header>
 
 <div class="wrap"><div id="root" class="fade"></div></div>
@@ -120,7 +120,7 @@ function newMeeting() {
     id: Date.now(), date: today(),
     clientName: '',
     // DC (дебетовые карты)
-    F:0,G:0,H:0,I:0,J:0,K:0,L:0,  // ОК,Х5,ИНВ,RE,СНВ,Семейный,ДК+Детская
+    F:0,G:0,H:0,I:0,J:0,K:0,L:0,  // ДК,Х5,ИНВ,RE,СНВ,Семейный,ДК+Детская
     E:0,  // sum DC
     M:0, N:0,  // DC акт, ТР
     // КК
@@ -133,7 +133,7 @@ function newMeeting() {
     AK:0,  // НК
     AP:0,  // УП / Отказ банка
     // Кросс
-    X:0, Y:0,  // КЛ/НДВ выбран / с ТР+
+    X:0, Y:0,  // КЛ/ККК выбран / с ТР+
     T:0, V:0, W:0,  // ИИС к ДК: выбран, акт, ТР
     U:0,  // ИИС к НБ
     AJ:0, AN:0,  // Кросс СИМ, Кросс Детская
@@ -214,8 +214,24 @@ let history = JSON.parse(localStorage.getItem('alfa_h') || '[]');
 function saveHistory() { localStorage.setItem('alfa_h', JSON.stringify(history)); }
 function today() { return new Date().toLocaleDateString('ru-RU'); }
 
-function goHome()  { meeting = null; screen = 'home';    render(); }
-function startMtg(){ meeting = newMeeting(); screen = 'meeting'; render(); }
+let navStack = [];
+
+function navigate(newScreen, resetMeeting) {
+  navStack.push(screen);
+  if (resetMeeting) meeting = null;
+  screen = newScreen;
+  render();
+}
+
+function goBack() {
+  const prev = navStack.pop();
+  if (!prev || prev === 'home') { meeting = null; screen = 'home'; render(); return; }
+  screen = prev;
+  render();
+}
+
+function goHome()  { navStack = []; meeting = null; screen = 'home'; render(); }
+function startMtg(){ navStack.push(screen); meeting = newMeeting(); screen = 'meeting'; render(); }
 
 function completeMtg() {
   if (!meeting) return;
@@ -224,6 +240,7 @@ function completeMtg() {
   meeting.AW = 'COMPLETED';
   history.push({...meeting});
   saveHistory();
+  navStack.push('meeting');
   screen = 'result';
   render();
 }
@@ -339,11 +356,11 @@ function renderDailyCard(mtgs) {
 
   const rows = [
     ['Всего встреч',    t.count],
-    ['ДК',              t.E],
-    ['КК1',             t.O],
-    ['ТЗ КК1',          t.R],
-    ['ФЗ КК1',          t.S],
-    ['КДК к КК',        0],
+    ['DC',              t.E],
+    ['CC1',             t.O],
+    ['ТЗ CC1',          t.R],
+    ['ФЗ CC1',          t.S],
+    ['КДК к CC',        0],
     ['ТЗ КДК',          0],
     ['Комбо',           t.AU],
     ['ТЗ Комбо',        0],
@@ -428,11 +445,11 @@ function renderMeeting() {
   const stage = m.AW;
   const screenFns = {
     'OP':              renderOP,
-    'DC_ACT_TR':       ()=>renderActTR('Активация / транзакция (ДК)',     handleDC),
-    'KK_ACT_TR':       ()=>renderActTR('Активация / транзакция (КК)',     handleKK),
+    'DC_ACT_TR':       ()=>renderActTR('Активация / транзакция (DC)',     handleDC),
+    'KK_ACT_TR':       ()=>renderActTR('Активация / транзакция (CC)',     handleKK),
     'Self_ACT_TR':     ()=>renderActTR('Активация / транзакция (Селфи)', handleSelf),
     'CP':              renderCP,
-    'KL_ACT_TR':       ()=>renderTRonly('КЛ/НДВ — была транзакция?',      handleKL),
+    'KL_ACT_TR':       ()=>renderTRonly('КЛ/ККК — была транзакция?',      handleKL),
     'KDK_ACT_TR':      ()=>renderActTR('Активация / транзакция (ИИС)',     handleKDK),
     'Self_ACT_TR_2':   ()=>renderActTR('Активация / транзакция (Селфи)', handleSelf2),
     'Diff_ACT_TR':     ()=>renderActTR('Активация / транзакция (кросс)',   handleDiff),
@@ -443,11 +460,11 @@ function renderMeeting() {
     'APP':             renderApp,
     'AFTER_APP':       renderAfterApp,
     'MORE_PRODUCT1':   ()=>renderMoreProduct(1),
-    'MORE_DC_ACT_TR_1':   ()=>renderActTR('Доп. продукт 1 (ДК)',     r=>handleMoreDC(1,r)),
+    'MORE_DC_ACT_TR_1':   ()=>renderActTR('Доп. продукт 1 (DC)',     r=>handleMoreDC(1,r)),
     'MORE_Self_ACT_TR_1': ()=>renderActTR('Доп. продукт 1 (Селфи)', r=>handleMoreSelf(1,r)),
     'MORE_Diff_ACT_TR_1': ()=>renderActTR('Доп. продукт 1',          r=>handleMoreDiff(1,r)),
     'MORE_PRODUCT2':   ()=>renderMoreProduct(2),
-    'MORE_DC_ACT_TR_2':    ()=>renderActTR('Доп. продукт 2 (ДК)',     r=>handleMoreDC(2,r)),
+    'MORE_DC_ACT_TR_2':    ()=>renderActTR('Доп. продукт 2 (DC)',     r=>handleMoreDC(2,r)),
     'MORE_Selfe_ACT_TR_2': ()=>renderActTR('Доп. продукт 2 (Селфи)', r=>handleMoreSelf(2,r)),
     'MORE_Diff_ACT_TR_2':  ()=>renderActTR('Доп. продукт 2',          r=>handleMoreDiff(2,r)),
   };
@@ -461,8 +478,8 @@ function renderMeeting() {
       btn('🗑 Удалить встречу',()=>{
         if(confirm('Сбросить текущую встречу?')){meeting=newMeeting();screen='meeting';render();}
       },'btn-danger'),
-      btn('← Главная',()=>{
-        if(confirm('Вернуться? Данные встречи будут потеряны.')){goHome();}
+      btn('← Назад',()=>{
+        if(confirm('Вернуться? Данные встречи будут потеряны.')){goBack();}
       },'btn-gray'),
     ])
   ));
@@ -475,24 +492,24 @@ function renderOP() {
   c.append(badge('Шаг 1 из 7'), desc('Выберите основной продукт встречи:'));
 
   // DC группа
-  c.append(el('div',{cls:'card-title',css:'margin-top:6px;margin-bottom:6px'},'Дебетовые карты'));
+  c.append(el('div',{cls:'card-title',css:'margin-top:6px;margin-bottom:6px'},'Дебетовые карты (DC)'));
   c.append(grid(3,[
-    btn('ОК',    ()=>pickDC('ОК','F')),
-    btn('Х5',   ()=>pickDC('Х5','G')),
-    btn('ИНВ',  ()=>pickDC('ИНВ','H')),
-    btn('RE',   ()=>pickDC('RE','I')),
-    btn('СНВ',  ()=>pickDC('СНВ','J')),
-    btn('Семейный',()=>pickDC('Семейный','K')),
+    btn('DC',          ()=>pickDC('DC','F')),
+    btn('DC X5',       ()=>pickDC('DC X5','G')),
+    btn('DC ИНВ',      ()=>pickDC('DC ИНВ','H')),
+    btn('DC RE/ZPC',   ()=>pickDC('DC RE/ZPC','I')),
+    btn('DC нерезидент',()=>pickDC('DC нерезидент','J')),
+    btn('DC Семейный', ()=>pickDC('DC Семейный','K')),
   ]));
   c.append(el('div',{css:'margin-top:7px'},
-    grid(1,[btn('ДК + Детская',()=>pickDC('ДК+Детская','L',2),'btn-full')])
+    grid(1,[btn('DC + Детская',()=>pickDC('DC+Детская','L',2),'btn-full')])
   ));
 
-  // КК группа
-  c.append(el('div',{cls:'card-title',css:'margin-top:12px;margin-bottom:6px'},'Кредитные карты'));
+  // CC группа
+  c.append(el('div',{cls:'card-title',css:'margin-top:12px;margin-bottom:6px'},'Кредитные карты (CC)'));
   c.append(grid(2,[
-    btn('КК1', ()=>pickKK('КК1','O')),
-    btn('КК2', ()=>pickKK('КК2','P')),
+    btn('CC1', ()=>pickKK('CC1','O')),
+    btn('CC2', ()=>pickKK('CC2','P')),
   ]));
 
   // Селфи
@@ -506,8 +523,8 @@ function renderOP() {
   // Специальные
   c.append(el('div',{cls:'card-title',css:'margin-top:12px;margin-bottom:6px'},'Специальные'));
   c.append(grid(2,[
-    btn('НК',          ()=>pickSpecial('НК','AK')),
-    btn('Установка МП',()=>pickSpecial('Установка МП','AI')),
+    btn('НК',                ()=>pickSpecial('НК','AK')),
+    btn('Установка АМ и АИ', ()=>pickSpecial('Установка АМ и АИ','AI')),
   ]));
   c.append(el('div',{css:'margin-top:7px'},
     btn('Отказ банка',()=>pickRefusal(),'btn-danger btn-full')
@@ -610,8 +627,8 @@ function renderCP() {
   const c=card('Кросс продукт');
   c.append(badge('Шаг 2 из 7'), desc('Выберите кросс продукт:'));
   c.append(grid(2,[
-    btn('КЛ / НДВ',       ()=>pickCrossKL()),
-    btn('ИИС к ДК',       ()=>pickCrossKDK('T','ИИС к ДК')),
+    btn('КЛ / ККК',       ()=>pickCrossKL()),
+    btn('ИИС к DC',       ()=>pickCrossKDK('T','ИИС к DC')),
     btn('ИИС к НБ',       ()=>pickCrossKDK('U','ИИС к НБ')),
     btn('Селфи n2b',     ()=>pickCrossSelf('AC','Селфи n2b')),
     btn('Селфи ВБ',      ()=>pickCrossSelf('AD','Селфи ВБ')),
@@ -625,7 +642,7 @@ function renderCP() {
   return c;
 }
 function pickCrossKL() {
-  meeting.X++; meeting.crossType='КЛ/НДВ'; meeting.AW='KL_ACT_TR'; render();
+  meeting.X++; meeting.crossType='КЛ/ККК'; meeting.AW='KL_ACT_TR'; render();
 }
 function pickCrossKDK(col,name) {
   meeting[col]=(meeting[col]||0)+1; meeting.crossType=name; meeting.AW='KDK_ACT_TR'; render();
@@ -692,14 +709,14 @@ function gotoES3() {
 }
 
 function renderES3() {
-  const c=card('Доп. продажи (КК)');
-  c.append(badge('Шаг 6 из 7'), desc('ФЗ КК1 или УП?'));
+  const c=card('Доп. продажи (CC)');
+  c.append(badge('Шаг 6 из 7'), desc('ФЗ CC1 или УП?'));
   c.append(grid(2,[
-    btn('ФЗ КК1', ()=>{ meeting.S=1; afterES3(); }),
+    btn('ФЗ CC1', ()=>{ meeting.S=1; afterES3(); }),
     btn('УП',     ()=>{ meeting.AP=1; meeting.CO=1; afterES3(); }),
   ]));
   c.append(el('div',{css:'margin-top:7px'},
-    btn('ФЗ КК1 и УП', ()=>{ meeting.S=1; meeting.AP=1; meeting.CO=1; afterES3(); },'btn-full')
+    btn('ФЗ CC1 и УП', ()=>{ meeting.S=1; meeting.AP=1; meeting.CO=1; afterES3(); },'btn-full')
   ));
   c.append(el('div',{css:'margin-top:7px'},
     btn('—  Пропустить', afterES3, 'btn-gray btn-full')
@@ -737,7 +754,7 @@ function renderAfterApp() {
   if(m.moreProduct2Type) chips.append(el('span',{cls:'chip'},`➕ ${m.moreProduct2Type}`));
   const extras=[];
   if(m.AA)extras.push('БС'); if(m.Z)extras.push('Инвест.'); if(m.AB)extras.push('ЦП');
-  if(m.AO)extras.push('Вок'); if(m.S)extras.push('ФЗ КК1'); if(m.CO)extras.push('УП');
+  if(m.AO)extras.push('Вок'); if(m.S)extras.push('ФЗ CC1'); if(m.CO)extras.push('УП');
   if(m.AL)extras.push('Куть'); if(m.AM)extras.push('Защитник'); if(m.AQ)extras.push('Смарт');
   if(m.AS)extras.push('ПДС'); if(m.AT)extras.push('Пенсия'); if(m.AU)extras.push('Комбо 1½');
   extras.forEach(e=>chips.append(el('span',{cls:'chip'},e)));
@@ -773,8 +790,8 @@ function renderMoreProduct(num) {
   const c=card(`Дополнительный продукт ${num}`);
   c.append(desc(`Выберите ${num===1?'первый':'второй'} дополнительный продукт:`));
   c.append(grid(3,[
-    btn('ОК',            ()=>pickMore(num,'ОК','F','dc')),
-    btn('Х5',           ()=>pickMore(num,'Х5','G','dc')),
+    btn('DC',            ()=>pickMore(num,'DC','F','dc')),
+    btn('DC X5',         ()=>pickMore(num,'DC X5','G','dc')),
     btn('Селфи n2b',   ()=>pickMore(num,'Селфи n2b','AC','self')),
     btn('Селфи ВБ',    ()=>pickMore(num,'Селфи ВБ','AD','self')),
     btn('Селфи НБ',    ()=>pickMore(num,'Селфи НБ','AE','self')),
@@ -841,7 +858,7 @@ function renderResult() {
   if(m.Z)  extras.push('💼 Инвесткопилка');
   if(m.AB) extras.push('💳 ЦП');
   if(m.AO) extras.push('📱 Вок');
-  if(m.S)  extras.push('🏷 ФЗ КК1');
+  if(m.S)  extras.push('🏷 ФЗ CC1');
   if(m.CO) extras.push('✅ УП');
   if(m.AL) extras.push('🛒 Куть');
   if(m.AM) extras.push('🛡 Защитник');
@@ -864,7 +881,7 @@ function renderResult() {
   root.append(card(null,
     grid(1,[
       btn('▶  Новая встреча', startMtg, 'btn-red btn-full'),
-      btn('← Главная',       goHome,   'btn-outline btn-full'),
+      btn('← Назад',         goBack,   'btn-outline btn-full'),
     ])
   ));
   return root;
