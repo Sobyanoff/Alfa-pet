@@ -874,7 +874,7 @@ function renderES2() {
   ];
   const g=el('div',{cls:'grid g3'});
   items.forEach(([lbl,col])=>{
-    g.append(btn(lbl,()=>{ m[col]=m[col]?0:1; render(); }, m[col]?'on':''));
+    g.append(btn(lbl,()=>{ m[col]=m[col]?0:1; render(true); }, m[col]?'on':''));
   });
   c.append(g);
   c.append(el('div',{css:'margin-top:10px'},
