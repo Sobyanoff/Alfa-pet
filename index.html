@@ -1069,7 +1069,7 @@ function renderResult() {
 // ═══════════════════════════════════════════════════════
 //  MAIN RENDER
 // ═══════════════════════════════════════════════════════
-function render() {
+function render(keepScroll) {
   const root=document.getElementById('root');
   root.innerHTML='';
   root.className='fade';
@@ -1079,7 +1079,7 @@ function render() {
   else if (screen==='result')  node=renderResult();
   else                         node=renderHome();
   root.append(node);
-  window.scrollTo({top:0,behavior:'smooth'});
+  if (!keepScroll) window.scrollTo({top:0,behavior:'smooth'});
 }
 
 // ═══════════════════════════════════════════════════════
