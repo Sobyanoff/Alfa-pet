@@ -158,7 +158,9 @@ function newMeeting() {
     // Итог
     AV:0,
     // Текущий этап
-    AW:'OP'
+    AW:'OP',
+    // История шагов (для кнопки ← Назад внутри встречи)
+    awStack:[]
   };
 }
 
@@ -252,6 +254,19 @@ function completeMtg() {
 }
 
 function setStage(s) { if (meeting) { meeting.AW = s; render(); } }
+function goStage(s) {
+  if (!meeting) return;
+  meeting.awStack = meeting.awStack || [];
+  meeting.awStack.push(meeting.AW);
+  meeting.AW = s;
+  render();
+}
+function backStage() {
+  if (!meeting) return;
+  meeting.awStack = meeting.awStack || [];
+  if (meeting.awStack.length) { meeting.AW = meeting.awStack.pop(); render(); }
+  else goBack();
+}
 
 // ═══════════════════════════════════════════════════════
 //  DOM HELPERS
@@ -484,9 +499,7 @@ function renderMeeting() {
       btn('🗑 Удалить встречу',()=>{
         if(confirm('Сбросить текущую встречу?')){meeting=newMeeting();screen='meeting';render();}
       },'btn-danger'),
-      btn('← Назад',()=>{
-        if(confirm('Вернуться? Данные встречи будут потеряны.')){goBack();}
-      },'btn-gray'),
+      btn('← Назад', backStage, 'btn-gray'),
     ])
   ));
   return root;
@@ -541,28 +554,28 @@ function renderOP() {
 function pickDC(name,col,count=1) {
   meeting[col]=(meeting[col]||0)+count;
   meeting.primaryType=name;
-  meeting.AW='DC_ACT_TR'; render();
+  goStage('DC_ACT_TR');
 }
 function pickKK(name,col) {
   meeting[col]=(meeting[col]||0)+1;
   meeting.primaryType=name;
-  meeting.AW='KK_ACT_TR'; render();
+  goStage('KK_ACT_TR');
 }
 function pickSelf(name,col) {
   meeting[col]=(meeting[col]||0)+1;
   meeting.primaryType=name;
-  meeting.AW='Self_ACT_TR'; render();
+  goStage('Self_ACT_TR');
 }
 function pickSpecial(name,col) {
   meeting[col]=(meeting[col]||0)+1;
   meeting.primaryType=name;
   meeting.CM=1;
-  meeting.AW='AFTER_APP'; render();
+  goStage('AFTER_APP');
 }
 function pickRefusal() {
   meeting.AP=1; meeting.CN=1; meeting.CM=1;
   meeting.primaryType='Отказ банка';
-  meeting.AW='AFTER_APP'; render();
+  goStage('AFTER_APP');
 }
 
 /* ─── Активация / Транзакция ─── */
@@ -590,42 +603,42 @@ function handleDC(r) {
   if(r==='АК+ ТР+'){ meeting.M++; meeting.N++; meeting.AY=2; }
   else if(r==='АК+ ТР-'){ meeting.M++; meeting.AY=1; }
   else meeting.AY=0;
-  meeting.AW='CP'; render();
+  goStage('CP');
 }
 function handleKK(r) {
   if(r==='АК+ ТР+'){ meeting.Q++; meeting.R++; meeting.AY=2; }
   else if(r==='АК+ ТР-'){ meeting.Q++; meeting.AY=1; }
   else meeting.AY=0;
-  meeting.AW='CP'; render();
+  goStage('CP');
 }
 function handleSelf(r) {
   if(r==='АК+ ТР+'){ meeting.AF++; meeting.AG++; meeting.AY=2; }
   else if(r==='АК+ ТР-'){ meeting.AF++; meeting.AY=1; }
   else meeting.AY=0;
-  meeting.AW='CP'; render();
+  goStage('CP');
 }
 function handleKL(r) {
   if(r==='ТР+'){ meeting.Y++; meeting.AZ=2; }
   else meeting.AZ=0;
-  meeting.AW='EXTRA_SALES_0'; render();
+  goStage('EXTRA_SALES_0');
 }
 function handleKDK(r) {
   if(r==='АК+ ТР+'){ meeting.V++; meeting.W++; meeting.AZ=2; }
   else if(r==='АК+ ТР-'){ meeting.V++; meeting.AZ=1; }
   else meeting.AZ=0;
-  meeting.AW='EXTRA_SALES_0'; render();
+  goStage('EXTRA_SALES_0');
 }
 function handleSelf2(r) {
   if(r==='АК+ ТР+'){ meeting.AF++; meeting.AG++; meeting.AZ=2; }
   else if(r==='АК+ ТР-'){ meeting.AF++; meeting.AZ=1; }
   else meeting.AZ=0;
-  meeting.AW='EXTRA_SALES_0'; render();
+  goStage('EXTRA_SALES_0');
 }
 function handleDiff(r) {
   if(r==='АК+ ТР+') meeting.AZ=2;
   else if(r==='АК+ ТР-') meeting.AZ=1;
   else meeting.AZ=0;
-  meeting.AW='EXTRA_SALES_0'; render();
+  goStage('EXTRA_SALES_0');
 }
 
 /* ─── CP: Кросс продукт ─── */
@@ -643,21 +656,21 @@ function renderCP() {
     btn('Кросс Детская',  ()=>pickCrossDiff('AN','Кросс Детская')),
   ]));
   c.append(el('div',{css:'margin-top:8px'},
-    btn('Пропустить →', ()=>{ meeting.AW='EXTRA_SALES_0'; render(); }, 'btn-gray btn-full')
+    btn('Пропустить →', ()=>goStage('EXTRA_SALES_0'), 'btn-gray btn-full')
   ));
   return c;
 }
 function pickCrossKL() {
-  meeting.X++; meeting.crossType='КЛ/ККК'; meeting.AW='KL_ACT_TR'; render();
+  meeting.X++; meeting.crossType='КЛ/ККК'; goStage('KL_ACT_TR');
 }
 function pickCrossKDK(col,name) {
-  meeting[col]=(meeting[col]||0)+1; meeting.crossType=name; meeting.AW='KDK_ACT_TR'; render();
+  meeting[col]=(meeting[col]||0)+1; meeting.crossType=name; goStage('KDK_ACT_TR');
 }
 function pickCrossSelf(col,name) {
-  meeting[col]=(meeting[col]||0)+1; meeting.crossType=name; meeting.AW='Self_ACT_TR_2'; render();
+  meeting[col]=(meeting[col]||0)+1; meeting.crossType=name; goStage('Self_ACT_TR_2');
 }
 function pickCrossDiff(col,name) {
-  meeting[col]=(meeting[col]||0)+1; meeting.crossType=name; meeting.AW='Diff_ACT_TR'; render();
+  meeting[col]=(meeting[col]||0)+1; meeting.crossType=name; goStage('Diff_ACT_TR');
 }
 
 /* ─── EXTRA SALES ─── */
@@ -665,9 +678,9 @@ function renderES0() {
   const c=card('Доп. продажи');
   c.append(badge('Шаг 3 из 7'), desc('БС или Инвесткопилка?'));
   c.append(grid(1,[
-    btn('БС (покупка от 1 000₽)',          ()=>{ meeting.AA=1; meeting.AW='EXTRA_SALES_1'; render(); },'btn-full'),
-    btn('Инвесткопилка (пополнение от 2 500₽)', ()=>{ meeting.Z=1;  meeting.AW='EXTRA_SALES_1'; render(); },'btn-full'),
-    btn('—  Ни то, ни другое',             ()=>{ meeting.AW='EXTRA_SALES_1'; render(); },'btn-gray btn-full'),
+    btn('БС (покупка от 1 000₽)',          ()=>{ meeting.AA=1; goStage('EXTRA_SALES_1'); },'btn-full'),
+    btn('Инвесткопилка (пополнение от 2 500₽)', ()=>{ meeting.Z=1; goStage('EXTRA_SALES_1'); },'btn-full'),
+    btn('—  Ни то, ни другое',             ()=>goStage('EXTRA_SALES_1'),'btn-gray btn-full'),
   ]));
   return c;
 }
@@ -676,14 +689,14 @@ function renderES1() {
   const c=card('Доп. продажи');
   c.append(badge('Шаг 4 из 7'), desc('ЦП или Вок?'));
   c.append(grid(2,[
-    btn('ЦП',  ()=>{ meeting.AB=1; meeting.AW='EXTRA_SALES_2'; render(); }),
-    btn('Вок', ()=>{ meeting.AO=1; meeting.AW='EXTRA_SALES_2'; render(); }),
+    btn('ЦП',  ()=>{ meeting.AB=1; goStage('EXTRA_SALES_2'); }),
+    btn('Вок', ()=>{ meeting.AO=1; goStage('EXTRA_SALES_2'); }),
   ]));
   c.append(el('div',{css:'margin-top:7px'},
-    btn('ЦП и Вок', ()=>{ meeting.AB=1; meeting.AO=1; meeting.AW='EXTRA_SALES_2'; render(); },'btn-full')
+    btn('ЦП и Вок', ()=>{ meeting.AB=1; meeting.AO=1; goStage('EXTRA_SALES_2'); },'btn-full')
   ));
   c.append(el('div',{css:'margin-top:7px'},
-    btn('—  Пропустить', ()=>{ meeting.AW='EXTRA_SALES_2'; render(); },'btn-gray btn-full')
+    btn('—  Пропустить', ()=>goStage('EXTRA_SALES_2'),'btn-gray btn-full')
   ));
   return c;
 }
@@ -709,9 +722,9 @@ function renderES2() {
 
 function gotoES3() {
   const isKK = (meeting.O||0)>0 || (meeting.P||0)>0;
-  if (isKK) { meeting.AW='EXTRA_SALES_3'; render(); }
-  else if (meeting.CM) { meeting.AW='AFTER_APP'; render(); }
-  else { meeting.AW='APP'; render(); }
+  if (isKK) goStage('EXTRA_SALES_3');
+  else if (meeting.CM) goStage('AFTER_APP');
+  else goStage('APP');
 }
 
 function renderES3() {
@@ -730,8 +743,8 @@ function renderES3() {
   return c;
 }
 function afterES3() {
-  if (meeting.CM) { meeting.AW='AFTER_APP'; render(); }
-  else { meeting.AW='APP'; render(); }
+  if (meeting.CM) goStage('AFTER_APP');
+  else goStage('APP');
 }
 
 /* ─── APP Installation ─── */
@@ -739,10 +752,10 @@ function renderApp() {
   const c=card('Установка приложения');
   c.append(badge('Шаг 7 из 7'), desc('Установили приложение Альфа-Банк?'));
   c.append(grid(2,[
-    btn('Android  ✓', ()=>{ meeting.CL=1; meeting.AH=1; meeting.AW='AFTER_APP'; render(); },'btn-green'),
-    btn('Android  ✗', ()=>{ meeting.CL=1; meeting.AH=0; meeting.AW='AFTER_APP'; render(); }),
-    btn('iPhone  ✓',  ()=>{ meeting.CL=0; meeting.AH=1; meeting.AW='AFTER_APP'; render(); },'btn-green'),
-    btn('iPhone  ✗',  ()=>{ meeting.CL=0; meeting.AH=0; meeting.AW='AFTER_APP'; render(); }),
+    btn('Android  ✓', ()=>{ meeting.CL=1; meeting.AH=1; goStage('AFTER_APP'); },'btn-green'),
+    btn('Android  ✗', ()=>{ meeting.CL=1; meeting.AH=0; goStage('AFTER_APP'); }),
+    btn('iPhone  ✓',  ()=>{ meeting.CL=0; meeting.AH=1; goStage('AFTER_APP'); },'btn-green'),
+    btn('iPhone  ✗',  ()=>{ meeting.CL=0; meeting.AH=0; goStage('AFTER_APP'); }),
   ]));
   return c;
 }
@@ -773,18 +786,18 @@ function renderAfterApp() {
   // Ещё продукт (только если не было 2 доп. продукта)
   if (!m.moreProduct1Type) {
     c.append(el('div',{css:'margin-bottom:7px'},
-      btn('➕  Ещё продукт', ()=>{ meeting.AW='MORE_PRODUCT1'; render(); },'btn-outline btn-full')
+      btn('➕  Ещё продукт', ()=>goStage('MORE_PRODUCT1'),'btn-outline btn-full')
     ));
   } else if (!m.moreProduct2Type) {
     c.append(el('div',{css:'margin-bottom:7px'},
-      btn('➕  Добавить ещё', ()=>{ meeting.AW='MORE_PRODUCT2'; render(); },'btn-outline btn-full')
+      btn('➕  Добавить ещё', ()=>goStage('MORE_PRODUCT2'),'btn-outline btn-full')
     ));
   }
 
   // Если спец. продукт — показываем «Продажи»
   if (m.CM && !m.primaryType?.includes('Отказ')) {
     c.append(el('div',{css:'margin-bottom:7px'},
-      btn('💼  Доп. продажи', ()=>{ meeting.AW='EXTRA_SALES_0'; render(); },'btn-outline btn-full')
+      btn('💼  Доп. продажи', ()=>goStage('EXTRA_SALES_0'),'btn-outline btn-full')
     ));
   }
 
@@ -810,16 +823,12 @@ function pickMore(num,name,col,type) {
   meeting[col]=(meeting[col]||0)+1;
   if(num===1){ meeting.moreProduct1Type=name; }
   else       { meeting.moreProduct2Type=name; }
-  const stageMap = { dc:'MORE_DC_ACT_TR_', self:'MORE_Self_ACT_TR_', diff:'MORE_Diff_ACT_TR_' };
-  const suffix = num===1 ? '1' : (type==='self' ? '2' : '2');
-  // Map exact stage keys
   const exact = {
     dc:   { 1:'MORE_DC_ACT_TR_1',    2:'MORE_DC_ACT_TR_2'    },
     self: { 1:'MORE_Self_ACT_TR_1',  2:'MORE_Selfe_ACT_TR_2' },
     diff: { 1:'MORE_Diff_ACT_TR_1',  2:'MORE_Diff_ACT_TR_2'  },
   };
-  meeting.AW = exact[type][num];
-  render();
+  goStage(exact[type][num]);
 }
 
 function handleMoreDC(num,r) {
@@ -838,7 +847,7 @@ function handleMoreDiff(num,r) {
   afterMore(num);
 }
 function afterMore(num) {
-  meeting.AW='AFTER_APP'; render();
+  goStage('AFTER_APP');
 }
 
 /* ─── RESULT ─── */
