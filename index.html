@@ -637,6 +637,8 @@ function renderListAll() {
 
   // ── СЕКЦИЯ 3: Доп. продажи ──
   const esCard=card('Доп. продажи');
+  esCard.insertBefore(badge('Шаг 3 из 4'), esCard.firstChild.nextSibling);
+  esCard.style.marginBottom='20px';
   const esItems=[
     ['БС','AA'],['Инвест.','Z'],['ЦП','AB'],['Вок','AO'],
     ['Смарт','AQ'],['Комбо 1Р','AU'],['Кэш','AL'],['Защитник','AM'],
