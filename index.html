@@ -660,6 +660,8 @@ function renderListAll() {
 
   // ── СЕКЦИЯ 4: Приложение ──
   const appCard=card('Приложение');
+  appCard.insertBefore(badge('Шаг 4 из 4'), appCard.firstChild.nextSibling);
+  appCard.style.marginBottom='20px';
   appCard.append(grid(2,[
     btn('Android ✓',()=>{m.CL=1;m.AH=1;rerender();},m.CL===1&&m.AH===1?'btn-green':''),
     btn('Android ✗',()=>{m.CL=1;m.AH=0;rerender();},m.CL===1&&m.AH===0?'on':''),
