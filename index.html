@@ -565,7 +565,7 @@ function renderListAll() {
     return el('div',{css:'margin-top:8px;padding:8px;background:#f9fafb;border-radius:8px'},
       el('div',{cls:'card-title',css:'margin-bottom:6px'},titleTxt),
       grid(statuses.length, statuses.map(([lbl,v,cls])=>
-        btn(lbl,()=>setFn(v), val===v?(cls||'on'):cls)
+        btn(lbl,()=>setFn(v), val===v?(cls||'on'):'')
       ))
     );
   }
