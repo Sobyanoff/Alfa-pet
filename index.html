@@ -198,7 +198,7 @@ function calcEarnings(m, forceBSRate) {
   const dcM = m.M - nerAct;
   const r = (
     (dcE - dcM) * 250 + dcM * 310 +
-    (nerJ - nerAct) * 430 + nerAct * 570 +
+    (nerJ - nerAct) * 450 + nerAct * 570 +
     (m.O + m.P - m.Q) * 450 + m.Q * 570 +
     m.S * 100 + m.T * 270 + m.U * 270 +
     m.X * 570 +
@@ -398,7 +398,7 @@ function renderDailyCard(mtgs) {
     ['Пенсия',          t.AT],
     ['Смарт',           t.AQ],
     ['ПДС',             t.AS],
-    ['Кэш',             0],
+    ['Кэш',             t.AL],
     ['Вок на встрече',  t.AO],
   ];
 
@@ -535,8 +535,8 @@ function renderOP() {
   c.append(el('div',{cls:'card-title',css:'margin-top:12px;margin-bottom:6px'},'Селфи'));
   c.append(grid(3,[
     btn('n2b',  ()=>pickSelf('Селфи n2b','AC')),
-    btn('ВБ',   ()=>pickSelf('Селфи ВБ','AD')),
-    btn('НБ',   ()=>pickSelf('Селфи НБ','AE')),
+    btn('ДК',   ()=>pickSelf('Селфи ДК','AD')),
+    btn('КК',   ()=>pickSelf('Селфи КК','AE')),
   ]));
 
   // Специальные
@@ -583,9 +583,9 @@ function renderActTR(title, callback) {
   const c=card(title);
   c.append(desc('Сделал активацию и транзакцию по продукту?'));
   c.append(grid(3,[
-    btn('АК+ ТР+', ()=>callback('АК+ ТР+'), 'btn-green'),
-    btn('АК+ ТР-', ()=>callback('АК+ ТР-'), 'btn-warn'),
-    btn('А+',      ()=>callback('А+'),      ''),
+    btn('ВА+ ТР+', ()=>callback('ВА+ ТР+'), 'btn-green'),
+    btn('ВА+ ТР-', ()=>callback('ВА+ ТР-'), 'btn-warn'),
+    btn('В+',      ()=>callback('В+'),      ''),
   ]));
   return c;
 }
@@ -600,20 +600,20 @@ function renderTRonly(title, callback) {
 }
 
 function handleDC(r) {
-  if(r==='АК+ ТР+'){ meeting.M++; meeting.N++; meeting.AY=2; }
-  else if(r==='АК+ ТР-'){ meeting.M++; meeting.AY=1; }
+  if(r==='ВА+ ТР+'){ meeting.M++; meeting.N++; meeting.AY=2; }
+  else if(r==='ВА+ ТР-'){ meeting.M++; meeting.AY=1; }
   else meeting.AY=0;
   goStage('CP');
 }
 function handleKK(r) {
-  if(r==='АК+ ТР+'){ meeting.Q++; meeting.R++; meeting.AY=2; }
-  else if(r==='АК+ ТР-'){ meeting.Q++; meeting.AY=1; }
+  if(r==='ВА+ ТР+'){ meeting.Q++; meeting.R++; meeting.AY=2; }
+  else if(r==='ВА+ ТР-'){ meeting.Q++; meeting.AY=1; }
   else meeting.AY=0;
   goStage('CP');
 }
 function handleSelf(r) {
-  if(r==='АК+ ТР+'){ meeting.AF++; meeting.AG++; meeting.AY=2; }
-  else if(r==='АК+ ТР-'){ meeting.AF++; meeting.AY=1; }
+  if(r==='ВА+ ТР+'){ meeting.AF++; meeting.AG++; meeting.AY=2; }
+  else if(r==='ВА+ ТР-'){ meeting.AF++; meeting.AY=1; }
   else meeting.AY=0;
   goStage('CP');
 }
@@ -623,20 +623,20 @@ function handleKL(r) {
   goStage('EXTRA_SALES_0');
 }
 function handleKDK(r) {
-  if(r==='АК+ ТР+'){ meeting.V++; meeting.W++; meeting.AZ=2; }
-  else if(r==='АК+ ТР-'){ meeting.V++; meeting.AZ=1; }
+  if(r==='ВА+ ТР+'){ meeting.V++; meeting.W++; meeting.AZ=2; }
+  else if(r==='ВА+ ТР-'){ meeting.V++; meeting.AZ=1; }
   else meeting.AZ=0;
   goStage('EXTRA_SALES_0');
 }
 function handleSelf2(r) {
-  if(r==='АК+ ТР+'){ meeting.AF++; meeting.AG++; meeting.AZ=2; }
-  else if(r==='АК+ ТР-'){ meeting.AF++; meeting.AZ=1; }
+  if(r==='ВА+ ТР+'){ meeting.AF++; meeting.AG++; meeting.AZ=2; }
+  else if(r==='ВА+ ТР-'){ meeting.AF++; meeting.AZ=1; }
   else meeting.AZ=0;
   goStage('EXTRA_SALES_0');
 }
 function handleDiff(r) {
-  if(r==='АК+ ТР+') meeting.AZ=2;
-  else if(r==='АК+ ТР-') meeting.AZ=1;
+  if(r==='ВА+ ТР+') meeting.AZ=2;
+  else if(r==='ВА+ ТР-') meeting.AZ=1;
   else meeting.AZ=0;
   goStage('EXTRA_SALES_0');
 }
@@ -647,11 +647,11 @@ function renderCP() {
   c.append(badge('Шаг 2 из 7'), desc('Выберите кросс продукт:'));
   c.append(grid(2,[
     btn('КЛ / ККК',       ()=>pickCrossKL()),
-    btn('ИИС к DC',       ()=>pickCrossKDK('T','ИИС к DC')),
+    btn('КДК к ДК',       ()=>pickCrossKDK('T','КДК к ДК')),
     btn('ИИС к НБ',       ()=>pickCrossKDK('U','ИИС к НБ')),
     btn('Селфи n2b',     ()=>pickCrossSelf('AC','Селфи n2b')),
-    btn('Селфи ВБ',      ()=>pickCrossSelf('AD','Селфи ВБ')),
-    btn('Селфи НБ',      ()=>pickCrossSelf('AE','Селфи НБ')),
+    btn('Селфи ДК',      ()=>pickCrossSelf('AD','Селфи ДК')),
+    btn('Селфи КК',      ()=>pickCrossSelf('AE','Селфи КК')),
     btn('Кросс СИМ',      ()=>pickCrossDiff('AJ','Кросс СИМ')),
     btn('Кросс Детская',  ()=>pickCrossDiff('AN','Кросс Детская')),
   ]));
@@ -706,7 +706,7 @@ function renderES2() {
   const c=card('Доп. продажи');
   c.append(badge('Шаг 5 из 7'), desc('Отметьте дополнительные продукты (можно несколько):'));
   const items=[
-    ['Смарт','AQ'],['Комбо 1½','AU'],['Куть','AL'],
+    ['Смарт','AQ'],['Комбо 1Р','AU'],['Кэш','AL'],
     ['Защитник','AM'],['ПДС','AS'],['Пенсия','AT'],['Уст.МП Х5','AR'],
   ];
   const g=el('div',{cls:'grid g3'});
@@ -774,8 +774,8 @@ function renderAfterApp() {
   const extras=[];
   if(m.AA)extras.push('БС'); if(m.Z)extras.push('Инвест.'); if(m.AB)extras.push('ЦП');
   if(m.AO)extras.push('Вок'); if(m.S)extras.push('ФЗ CC1'); if(m.CO)extras.push('УП');
-  if(m.AL)extras.push('Куть'); if(m.AM)extras.push('Защитник'); if(m.AQ)extras.push('Смарт');
-  if(m.AS)extras.push('ПДС'); if(m.AT)extras.push('Пенсия'); if(m.AU)extras.push('Комбо 1½');
+  if(m.AL)extras.push('Кэш'); if(m.AM)extras.push('Защитник'); if(m.AQ)extras.push('Смарт');
+  if(m.AS)extras.push('ПДС'); if(m.AT)extras.push('Пенсия'); if(m.AU)extras.push('Комбо 1Р');
   extras.forEach(e=>chips.append(el('span',{cls:'chip'},e)));
   if(chips.children.length) c.append(chips);
 
@@ -812,8 +812,8 @@ function renderMoreProduct(num) {
     btn('DC',            ()=>pickMore(num,'DC','F','dc')),
     btn('DC X5',         ()=>pickMore(num,'DC X5','G','dc')),
     btn('Селфи n2b',   ()=>pickMore(num,'Селфи n2b','AC','self')),
-    btn('Селфи ВБ',    ()=>pickMore(num,'Селфи ВБ','AD','self')),
-    btn('Селфи НБ',    ()=>pickMore(num,'Селфи НБ','AE','self')),
+    btn('Селфи ДК',    ()=>pickMore(num,'Селфи ДК','AD','self')),
+    btn('Селфи КК',    ()=>pickMore(num,'Селфи КК','AE','self')),
     btn('Кросс СИМ',    ()=>pickMore(num,'Кросс СИМ','AJ','diff')),
     btn('Кросс Детская',()=>pickMore(num,'Кросс Детская','AN','diff')),
   ]));
@@ -832,18 +832,18 @@ function pickMore(num,name,col,type) {
 }
 
 function handleMoreDC(num,r) {
-  if(r==='АК+ ТР+'){ meeting.M++; meeting.N++; num===1?(meeting.BA=2):(meeting.BB=2); }
-  else if(r==='АК+ ТР-'){ meeting.M++; num===1?(meeting.BA=1):(meeting.BB=1); }
+  if(r==='ВА+ ТР+'){ meeting.M++; meeting.N++; num===1?(meeting.BA=2):(meeting.BB=2); }
+  else if(r==='ВА+ ТР-'){ meeting.M++; num===1?(meeting.BA=1):(meeting.BB=1); }
   afterMore(num);
 }
 function handleMoreSelf(num,r) {
-  if(r==='АК+ ТР+'){ meeting.AF++; meeting.AG++; num===1?(meeting.BA=2):(meeting.BB=2); }
-  else if(r==='АК+ ТР-'){ meeting.AF++; num===1?(meeting.BA=1):(meeting.BB=1); }
+  if(r==='ВА+ ТР+'){ meeting.AF++; meeting.AG++; num===1?(meeting.BA=2):(meeting.BB=2); }
+  else if(r==='ВА+ ТР-'){ meeting.AF++; num===1?(meeting.BA=1):(meeting.BB=1); }
   afterMore(num);
 }
 function handleMoreDiff(num,r) {
-  if(r==='АК+ ТР+') num===1?(meeting.BA=2):(meeting.BB=2);
-  else if(r==='АК+ ТР-') num===1?(meeting.BA=1):(meeting.BB=1);
+  if(r==='ВА+ ТР+') num===1?(meeting.BA=2):(meeting.BB=2);
+  else if(r==='ВА+ ТР-') num===1?(meeting.BA=1):(meeting.BB=1);
   afterMore(num);
 }
 function afterMore(num) {
@@ -855,7 +855,7 @@ function renderResult() {
   const m = history[history.length-1];
   if (!m) { goHome(); return el('div',{}); }
   const root=el('div',{});
-  const act=v=>v===2?'АК+ ТР+':v===1?'АК+ ТР-':'А+';
+  const act=v=>v===2?'ВА+ ТР+':v===1?'ВА+ ТР-':'В+';
 
   const sc=card('Результат встречи');
   sc.append(el('div',{cls:'total'},`${m.AV} ₽`));
@@ -875,13 +875,13 @@ function renderResult() {
   if(m.AO) extras.push('📱 Вок');
   if(m.S)  extras.push('🏷 ФЗ CC1');
   if(m.CO) extras.push('✅ УП');
-  if(m.AL) extras.push('🛒 Куть');
+  if(m.AL) extras.push('🛒 Кэш');
   if(m.AM) extras.push('🛡 Защитник');
   if(m.AQ) extras.push('💡 Смарт');
   if(m.AR) extras.push('📲 Уст.МП Х5');
   if(m.AS) extras.push('📊 ПДС');
   if(m.AT) extras.push('👴 Пенсия');
-  if(m.AU) extras.push('📦 Комбо 1½');
+  if(m.AU) extras.push('📦 Комбо 1Р');
   if(extras.length) {
     const ec=card('Дополнительные продажи');
     extras.forEach(e=>ec.append(el('div',{css:'padding:4px 0;font-size:13px'},e)));
