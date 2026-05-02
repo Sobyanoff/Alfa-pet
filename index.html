@@ -158,7 +158,7 @@ function newMeeting() {
     // Итог
     AV:0,
     // Текущий этап
-    AW:'OP',
+    AW:'MODE_SELECT',
     // История шагов (для кнопки ← Назад внутри встречи)
     awStack:[]
   };
@@ -248,7 +248,6 @@ function completeMtg() {
   meeting.AW = 'COMPLETED';
   history.push({...meeting});
   saveHistory();
-  navStack.push('meeting');
   screen = 'result';
   render();
 }
@@ -465,6 +464,8 @@ function renderMeeting() {
 
   const stage = m.AW;
   const screenFns = {
+    'MODE_SELECT':     renderModeSelect,
+    'LIST_ALL':        renderListAll,
     'OP':              renderOP,
     'DC_ACT_TR':       ()=>renderActTR('Активация / транзакция (DC)',     handleDC),
     'KK_ACT_TR':       ()=>renderActTR('Активация / транзакция (CC)',     handleKK),
@@ -505,30 +506,193 @@ function renderMeeting() {
   return root;
 }
 
+/* ─── MODE SELECT ─── */
+function renderModeSelect() {
+  const c=card('Режим встречи');
+  c.append(desc('Выберите способ ввода данных:'));
+  c.append(grid(1,[
+    btn('📋  Пошаговый режим', ()=>goStage('OP'), 'btn-red btn-full'),
+    btn('📝  Полный список',   ()=>goStage('LIST_ALL'), 'btn-outline btn-full'),
+  ]));
+  return c;
+}
+
+/* ─── LIST ALL: Полный список ─── */
+function renderListAll() {
+  const m=meeting;
+  const root=el('div',{});
+
+  // ── helpers ──
+  function rerender(){ render(); }
+
+  function clearMain(){
+    ['F','G','H','I','J','K','L'].forEach(k=>m[k]=0);
+    m.O=0;m.P=0;m.Q=0;m.R=0;
+    m.AC=0;m.AD=0;m.AE=0;m.AF=0;m.AG=0;
+    m.AI=0;m.AK=0;m.AP=0;m.CM=0;m.CN=0;
+    m.M=0;m.N=0;m.AY=0;m.primaryType=null;
+  }
+  function setMainAct(val){
+    m.AY=val;
+    const isDC=['F','G','H','I','J','K','L'].some(k=>m[k]>0);
+    const isKK=m.O>0||m.P>0;
+    const isSelf=m.AC>0||m.AD>0||m.AE>0;
+    if(isDC){ m.M=val>=1?1:0; m.N=val===2?1:0; }
+    if(isKK){ m.Q=val>=1?1:0; m.R=val===2?1:0; }
+    if(isSelf&&!isDC&&!isKK){ m.AF=val>=1?1:0; m.AG=val===2?1:0; }
+    rerender();
+  }
+  function clearCross(){
+    m.X=0;m.Y=0;m.T=0;m.V=0;m.W=0;m.AJ=0;m.AN=0;m.AZ=0;m.crossType=null;
+  }
+  function setCrossAct(val){
+    m.AZ=val;
+    if(m.crossType==='КЛ/ККК'){ m.Y=val===2?1:0; }
+    else if(m.crossType==='КДК к ДК'){ m.V=val>=1?1:0; m.W=val===2?1:0; }
+    rerender();
+  }
+
+  const isDC=['F','G','H','I','J','K','L'].some(k=>m[k]>0);
+  const isKK=m.O>0||m.P>0;
+  const isSelf=!isDC&&!isKK&&(m.AC>0||m.AD>0||m.AE>0);
+  const hasCross=!!m.crossType;
+  const needCrossAct=hasCross&&['КЛ/ККК','КДК к ДК','Селфи n2b','Селфи ДК','Селфи КК'].includes(m.crossType);
+
+  function actBlock(titleTxt, val, setFn, trOnly){
+    const statuses=trOnly
+      ?[['ТР+',2,'btn-green'],['ТР-',0,'']]
+      :[['ВА+ ТР+',2,'btn-green'],['ВА+ ТР-',1,'btn-warn'],['В+',0,'']];
+    return el('div',{css:'margin-top:8px;padding:8px;background:#f9fafb;border-radius:8px'},
+      el('div',{cls:'card-title',css:'margin-bottom:6px'},titleTxt),
+      grid(statuses.length, statuses.map(([lbl,v,cls])=>
+        btn(lbl,()=>setFn(v), val===v?(cls||'on'):cls)
+      ))
+    );
+  }
+
+  // ── СЕКЦИЯ 1: Основной продукт ──
+  const mainCard=card('Основной продукт');
+
+  mainCard.append(el('div',{cls:'card-title',css:'margin-top:4px;margin-bottom:6px'},'Дебетовые карты'));
+  mainCard.append(grid(3,[
+    ['ДК','F'],['Х5','G'],['DC ИНВ','H'],
+    ['RE','I'],['DC нерез.','J'],['Семейный','K'],
+  ].map(([name,col])=>btn(name,()=>{
+    if(m[col]>0)clearMain(); else{clearMain();m[col]=1;m.primaryType=name;}rerender();
+  },m[col]>0?'on':''))));
+  mainCard.append(el('div',{css:'margin-top:7px'},
+    btn('ДК+Детская',()=>{
+      if(m.L>0)clearMain(); else{clearMain();m.L=2;m.primaryType='ДК+Детская';}rerender();
+    },m.L>0?'on btn-full':'btn-full')
+  ));
+  if(isDC) mainCard.append(actBlock('Статус DC', m.AY, setMainAct, false));
+
+  mainCard.append(el('div',{cls:'card-title',css:'margin-top:12px;margin-bottom:6px'},'Кредитные карты'));
+  mainCard.append(grid(2,[
+    btn('КК1',()=>{if(m.O>0)clearMain();else{clearMain();m.O=1;m.primaryType='КК1';}rerender();},m.O>0?'on':''),
+    btn('КК2',()=>{if(m.P>0)clearMain();else{clearMain();m.P=1;m.primaryType='КК2';}rerender();},m.P>0?'on':''),
+  ]));
+  if(isKK) mainCard.append(actBlock('Статус КК', m.AY, setMainAct, false));
+
+  mainCard.append(el('div',{cls:'card-title',css:'margin-top:12px;margin-bottom:6px'},'Селфи'));
+  mainCard.append(grid(3,[
+    btn('n2b',()=>{if(m.AC>0&&m.primaryType==='Селфи n2b')clearMain();else{clearMain();m.AC=1;m.primaryType='Селфи n2b';}rerender();},m.primaryType==='Селфи n2b'?'on':''),
+    btn('ДК', ()=>{if(m.AD>0&&m.primaryType==='Селфи ДК')clearMain();else{clearMain();m.AD=1;m.primaryType='Селфи ДК';}rerender();},m.primaryType==='Селфи ДК'?'on':''),
+    btn('КК', ()=>{if(m.AE>0&&m.primaryType==='Селфи КК')clearMain();else{clearMain();m.AE=1;m.primaryType='Селфи КК';}rerender();},m.primaryType==='Селфи КК'?'on':''),
+  ]));
+  if(isSelf) mainCard.append(actBlock('Статус Селфи', m.AY, setMainAct, false));
+
+  mainCard.append(el('div',{cls:'card-title',css:'margin-top:12px;margin-bottom:6px'},'Специальные'));
+  mainCard.append(grid(2,[
+    btn('КН',      ()=>{if(m.AK>0)clearMain();else{clearMain();m.AK=1;m.primaryType='КН';m.CM=1;}rerender();},m.AK>0?'on':''),
+    btn('Уст. МП', ()=>{if(m.AI>0)clearMain();else{clearMain();m.AI=1;m.primaryType='Установка МП';m.CM=1;}rerender();},m.AI>0?'on':''),
+  ]));
+  mainCard.append(el('div',{css:'margin-top:7px'},
+    btn('Отказ банка',()=>{
+      if(m.AP>0&&m.CN>0)clearMain();
+      else{clearMain();m.AP=1;m.CN=1;m.CM=1;m.primaryType='Отказ банка';}
+      rerender();
+    },(m.AP>0&&m.CN>0?'btn-danger':'btn-danger')+' btn-full')
+  ));
+
+  root.append(mainCard);
+
+  // ── СЕКЦИЯ 2: Кросс продукт ──
+  const crossCard=card('Кросс продукт');
+  crossCard.append(grid(2,[
+    btn('КЛ/ККК',()=>{if(m.crossType==='КЛ/ККК')clearCross();else{clearCross();m.X=1;m.crossType='КЛ/ККК';}rerender();},m.crossType==='КЛ/ККК'?'on':''),
+    btn('КДК к ДК',()=>{if(m.crossType==='КДК к ДК')clearCross();else{clearCross();m.T=1;m.crossType='КДК к ДК';}rerender();},m.crossType==='КДК к ДК'?'on':''),
+    btn('Селфи n2b',()=>{if(m.crossType==='Селфи n2b'){const prev=m.AC;clearCross();m.AC=m.primaryType==='Селфи n2b'?prev:Math.max(0,prev-1);}else{clearCross();m.AC++;m.crossType='Селфи n2b';}rerender();},m.crossType==='Селфи n2b'?'on':''),
+    btn('Селфи ДК', ()=>{if(m.crossType==='Селфи ДК'){const prev=m.AD;clearCross();m.AD=m.primaryType==='Селфи ДК'?prev:Math.max(0,prev-1);}else{clearCross();m.AD++;m.crossType='Селфи ДК';}rerender();},m.crossType==='Селфи ДК'?'on':''),
+    btn('Селфи КК', ()=>{if(m.crossType==='Селфи КК'){const prev=m.AE;clearCross();m.AE=m.primaryType==='Селфи КК'?prev:Math.max(0,prev-1);}else{clearCross();m.AE++;m.crossType='Селфи КК';}rerender();},m.crossType==='Селфи КК'?'on':''),
+    btn('Кросс СИМ',()=>{if(m.crossType==='Кросс СИМ')clearCross();else{clearCross();m.AJ=1;m.crossType='Кросс СИМ';}rerender();},m.crossType==='Кросс СИМ'?'on':''),
+    btn('Кросс Дет.',()=>{if(m.crossType==='Кросс Детская')clearCross();else{clearCross();m.AN=1;m.crossType='Кросс Детская';}rerender();},m.crossType==='Кросс Детская'?'on':''),
+  ]));
+  if(needCrossAct) crossCard.append(actBlock('Статус кросса', m.AZ, setCrossAct, m.crossType==='КЛ/ККК'));
+  root.append(crossCard);
+
+  // ── СЕКЦИЯ 3: Доп. продажи ──
+  const esCard=card('Доп. продажи');
+  const esItems=[
+    ['БС','AA'],['Инвест.','Z'],['ЦП','AB'],['Вок','AO'],
+    ['Смарт','AQ'],['Комбо 1Р','AU'],['Кэш','AL'],['Защитник','AM'],
+    ['ПДС','AS'],['Пенсия','AT'],['Уст.МП Х5','AR'],
+  ];
+  const esG=el('div',{cls:'grid g3'});
+  esItems.forEach(([lbl,col])=>{
+    esG.append(btn(lbl,()=>{m[col]=m[col]?0:1;rerender();},m[col]?'on':''));
+  });
+  esCard.append(esG);
+  if(isKK){
+    esCard.append(el('div',{cls:'card-title',css:'margin-top:10px;margin-bottom:6px'},'Только для КК'));
+    esCard.append(grid(2,[
+      btn('ФЗ CC1',()=>{m.S=m.S?0:1;rerender();},m.S?'on':''),
+      btn('УП',()=>{if(m.AP&&m.CO){m.AP=0;m.CO=0;}else{m.AP=1;m.CO=1;}rerender();},m.AP&&m.CO?'on':''),
+    ]));
+  }
+  root.append(esCard);
+
+  // ── СЕКЦИЯ 4: Приложение ──
+  const appCard=card('Приложение');
+  appCard.append(grid(2,[
+    btn('Android ✓',()=>{m.CL=1;m.AH=1;rerender();},m.CL===1&&m.AH===1?'btn-green':''),
+    btn('Android ✗',()=>{m.CL=1;m.AH=0;rerender();},m.CL===1&&m.AH===0?'on':''),
+    btn('iPhone ✓', ()=>{m.CL=0;m.AH=1;rerender();},m.CL===0&&m.AH===1?'btn-green':''),
+    btn('iPhone ✗', ()=>{m.CL=0;m.AH=0;rerender();},m.CL===0&&m.AH===0?'on':''),
+  ]));
+  root.append(appCard);
+
+  root.append(card(null,
+    btn('✅  Завершить встречу', completeMtg, 'btn-red btn-full')
+  ));
+
+  return root;
+}
+
 /* ─── OP: Основной продукт ─── */
 function renderOP() {
   const c=card('Основной продукт');
   c.append(badge('Шаг 1 из 7'), desc('Выберите основной продукт встречи:'));
 
   // DC группа
-  c.append(el('div',{cls:'card-title',css:'margin-top:6px;margin-bottom:6px'},'Дебетовые карты (DC)'));
+  c.append(el('div',{cls:'card-title',css:'margin-top:6px;margin-bottom:6px'},'Дебетовые карты (ДК)'));
   c.append(grid(3,[
-    btn('DC',          ()=>pickDC('DC','F')),
-    btn('DC X5',       ()=>pickDC('DC X5','G')),
-    btn('DC ИНВ',      ()=>pickDC('DC ИНВ','H')),
-    btn('DC RE/ZPC',   ()=>pickDC('DC RE/ZPC','I')),
+    btn('ДК',           ()=>pickDC('ДК','F')),
+    btn('Х5',           ()=>pickDC('Х5','G')),
+    btn('DC ИНВ',       ()=>pickDC('DC ИНВ','H')),
+    btn('RE',           ()=>pickDC('RE','I')),
     btn('DC нерезидент',()=>pickDC('DC нерезидент','J')),
-    btn('DC Семейный', ()=>pickDC('DC Семейный','K')),
+    btn('Семейный',     ()=>pickDC('Семейный','K')),
   ]));
   c.append(el('div',{css:'margin-top:7px'},
-    grid(1,[btn('DC + Детская',()=>pickDC('DC+Детская','L',2),'btn-full')])
+    grid(1,[btn('ДК+Детская',()=>pickDC('ДК+Детская','L',2),'btn-full')])
   ));
 
-  // CC группа
-  c.append(el('div',{cls:'card-title',css:'margin-top:12px;margin-bottom:6px'},'Кредитные карты (CC)'));
+  // КК группа
+  c.append(el('div',{cls:'card-title',css:'margin-top:12px;margin-bottom:6px'},'Кредитные карты (КК)'));
   c.append(grid(2,[
-    btn('CC1', ()=>pickKK('CC1','O')),
-    btn('CC2', ()=>pickKK('CC2','P')),
+    btn('КК1', ()=>pickKK('КК1','O')),
+    btn('КК2', ()=>pickKK('КК2','P')),
   ]));
 
   // Селфи
@@ -542,8 +706,8 @@ function renderOP() {
   // Специальные
   c.append(el('div',{cls:'card-title',css:'margin-top:12px;margin-bottom:6px'},'Специальные'));
   c.append(grid(2,[
-    btn('НК',                ()=>pickSpecial('НК','AK')),
-    btn('Установка АМ и АИ', ()=>pickSpecial('Установка АМ и АИ','AI')),
+    btn('КН',            ()=>pickSpecial('КН','AK')),
+    btn('Установка МП',  ()=>pickSpecial('Установка МП','AI')),
   ]));
   c.append(el('div',{css:'margin-top:7px'},
     btn('Отказ банка',()=>pickRefusal(),'btn-danger btn-full')
@@ -646,9 +810,8 @@ function renderCP() {
   const c=card('Кросс продукт');
   c.append(badge('Шаг 2 из 7'), desc('Выберите кросс продукт:'));
   c.append(grid(2,[
-    btn('КЛ / ККК',       ()=>pickCrossKL()),
+    btn('КЛ/ККК',          ()=>pickCrossKL()),
     btn('КДК к ДК',       ()=>pickCrossKDK('T','КДК к ДК')),
-    btn('ИИС к НБ',       ()=>pickCrossKDK('U','ИИС к НБ')),
     btn('Селфи n2b',     ()=>pickCrossSelf('AC','Селфи n2b')),
     btn('Селфи ДК',      ()=>pickCrossSelf('AD','Селфи ДК')),
     btn('Селфи КК',      ()=>pickCrossSelf('AE','Селфи КК')),
@@ -750,7 +913,8 @@ function afterES3() {
 /* ─── APP Installation ─── */
 function renderApp() {
   const c=card('Установка приложения');
-  c.append(badge('Шаг 7 из 7'), desc('Установили приложение Альфа-Банк?'));
+  const isKKflow=(meeting.O||0)>0||(meeting.P||0)>0;
+  c.append(badge(isKKflow?'Шаг 7 из 7':'Шаг 6 из 6'), desc('Установили приложение Альфа-Банк?'));
   c.append(grid(2,[
     btn('Android  ✓', ()=>{ meeting.CL=1; meeting.AH=1; goStage('AFTER_APP'); },'btn-green'),
     btn('Android  ✗', ()=>{ meeting.CL=1; meeting.AH=0; goStage('AFTER_APP'); }),
@@ -896,7 +1060,7 @@ function renderResult() {
   root.append(card(null,
     grid(1,[
       btn('▶  Новая встреча', startMtg, 'btn-red btn-full'),
-      btn('← Назад',         goBack,   'btn-outline btn-full'),
+      btn('← Главная',       goHome,   'btn-outline btn-full'),
     ])
   ));
   return root;
