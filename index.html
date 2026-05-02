@@ -523,7 +523,7 @@ function renderListAll() {
   const root=el('div',{});
 
   // ── helpers ──
-  function rerender(){ render(); }
+  function rerender(){ render(true); }
 
   function clearMain(){
     ['F','G','H','I','J','K','L'].forEach(k=>m[k]=0);
