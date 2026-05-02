@@ -621,6 +621,8 @@ function renderListAll() {
 
   // ── СЕКЦИЯ 2: Кросс продукт ──
   const crossCard=card('Кросс продукт');
+  crossCard.insertBefore(badge('Шаг 2 из 4'), crossCard.firstChild.nextSibling);
+  crossCard.style.marginBottom='20px';
   crossCard.append(grid(2,[
     btn('КЛ/ККК',()=>{if(m.crossType==='КЛ/ККК')clearCross();else{clearCross();m.X=1;m.crossType='КЛ/ККК';}rerender();},m.crossType==='КЛ/ККК'?'on':''),
     btn('КДК к ДК',()=>{if(m.crossType==='КДК к ДК')clearCross();else{clearCross();m.T=1;m.crossType='КДК к ДК';}rerender();},m.crossType==='КДК к ДК'?'on':''),
