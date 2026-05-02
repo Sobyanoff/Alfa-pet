@@ -572,6 +572,8 @@ function renderListAll() {
 
   // ── СЕКЦИЯ 1: Основной продукт ──
   const mainCard=card('Основной продукт');
+  mainCard.insertBefore(badge('Шаг 1 из 4'), mainCard.firstChild.nextSibling);
+  mainCard.style.marginBottom='20px';
 
   mainCard.append(el('div',{cls:'card-title',css:'margin-top:4px;margin-bottom:6px'},'Дебетовые карты'));
   mainCard.append(grid(3,[
