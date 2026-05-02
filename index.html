@@ -189,8 +189,14 @@ function calcEarnings(m, forceBSRate) {
   const rate = forceBSRate !== undefined
     ? forceBSRate
     : bsRate(monthlyBSTotal() + (m.AA || 0));
+  // DC нерезидент (колонка J) — отдельный тариф 570/430
+  const nerJ = m.J || 0;
+  const nerAct = (nerJ > 0 && m.primaryType === 'DC нерезидент' && (m.AY === 1 || m.AY === 2)) ? 1 : 0;
+  const dcE = m.E - nerJ;
+  const dcM = m.M - nerAct;
   const r = (
-    (m.E - m.M) * 250 + m.M * 310 +
+    (dcE - dcM) * 250 + dcM * 310 +
+    (nerJ - nerAct) * 430 + nerAct * 570 +
     (m.O + m.P - m.Q) * 450 + m.Q * 570 +
     m.S * 100 + m.T * 270 + m.U * 270 +
     m.X * 570 +
