@@ -217,12 +217,20 @@ function calcEarnings(m, forceBSRate) {
 // ═══════════════════════════════════════════════════════
 let meeting = null;
 let screen  = 'home';
-let history = JSON.parse(localStorage.getItem('alfa_h') || '[]');
+let history;
+try { history = JSON.parse(localStorage.getItem('alfa_h') || '[]'); }
+catch(e) { console.warn('alfa_h corrupt, resetting:', e); history = []; }
+if (!Array.isArray(history)) history = [];
 
-function saveHistory() { localStorage.setItem('alfa_h', JSON.stringify(history)); }
+function saveHistory() {
+  try { localStorage.setItem('alfa_h', JSON.stringify(history)); }
+  catch(e) { alert('Хранилище переполнено, очистите часть истории'); }
+}
 function today() { return new Date().toLocaleDateString('ru-RU'); }
 
 let navStack = [];
+let lastCompleted = null;
+let lastScreen = null;
 
 function navigate(newScreen, resetMeeting) {
   navStack.push(screen);
