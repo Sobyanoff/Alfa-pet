@@ -647,9 +647,9 @@ function renderListAll() {
   crossCard.append(grid(2,[
     btn('КЛ/ККК',()=>{if(m.crossType==='КЛ/ККК')clearCross();else{clearCross();m.X=1;m.crossType='КЛ/ККК';}rerender();},m.crossType==='КЛ/ККК'?'on':''),
     btn('КДК к ДК',()=>{if(m.crossType==='КДК к ДК')clearCross();else{clearCross();m.T=1;m.crossType='КДК к ДК';}rerender();},m.crossType==='КДК к ДК'?'on':''),
-    btn('Селфи n2b',()=>{if(m.crossType==='Селфи n2b'){const prev=m.AC;clearCross();m.AC=m.primaryType==='Селфи n2b'?prev:Math.max(0,prev-1);}else{clearCross();m.AC++;m.crossType='Селфи n2b';}rerender();},m.crossType==='Селфи n2b'?'on':''),
-    btn('Селфи ДК', ()=>{if(m.crossType==='Селфи ДК'){const prev=m.AD;clearCross();m.AD=m.primaryType==='Селфи ДК'?prev:Math.max(0,prev-1);}else{clearCross();m.AD++;m.crossType='Селфи ДК';}rerender();},m.crossType==='Селфи ДК'?'on':''),
-    btn('Селфи КК', ()=>{if(m.crossType==='Селфи КК'){const prev=m.AE;clearCross();m.AE=m.primaryType==='Селфи КК'?prev:Math.max(0,prev-1);}else{clearCross();m.AE++;m.crossType='Селфи КК';}rerender();},m.crossType==='Селфи КК'?'on':''),
+    btn('Селфи n2b',()=>{if(m.crossType==='Селфи n2b'){const prev=m.AC;clearCross();m.AC=Math.max(0,prev-1);}else{clearCross();m.AC++;m.crossType='Селфи n2b';}rerender();},m.crossType==='Селфи n2b'?'on':''),
+    btn('Селфи ДК', ()=>{if(m.crossType==='Селфи ДК'){const prev=m.AD;clearCross();m.AD=Math.max(0,prev-1);}else{clearCross();m.AD++;m.crossType='Селфи ДК';}rerender();},m.crossType==='Селфи ДК'?'on':''),
+    btn('Селфи КК', ()=>{if(m.crossType==='Селфи КК'){const prev=m.AE;clearCross();m.AE=Math.max(0,prev-1);}else{clearCross();m.AE++;m.crossType='Селфи КК';}rerender();},m.crossType==='Селфи КК'?'on':''),
     btn('Кросс СИМ',()=>{if(m.crossType==='Кросс СИМ')clearCross();else{clearCross();m.AJ=1;m.crossType='Кросс СИМ';}rerender();},m.crossType==='Кросс СИМ'?'on':''),
     btn('Кросс Дет.',()=>{if(m.crossType==='Кросс Детская')clearCross();else{clearCross();m.AN=1;m.crossType='Кросс Детская';}rerender();},m.crossType==='Кросс Детская'?'on':''),
   ]));
