@@ -599,7 +599,7 @@ function renderListAll() {
   mainCard.append(el('div',{cls:'card-title',css:'margin-top:4px;margin-bottom:6px'},'Дебетовые карты'));
   mainCard.append(grid(3,[
     ['ДК','F'],['Х5','G'],['DC ИНВ','H'],
-    ['RE','I'],['DC нерез.','J'],['Семейный','K'],
+    ['RE','I'],['DC нерезидент','J'],['Семейный','K'],
   ].map(([name,col])=>btn(name,()=>{
     if(m[col]>0)clearMain(); else{clearMain();m[col]=1;m.primaryType=name;}rerender();
   },m[col]>0?'on':''))));
