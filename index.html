@@ -1642,8 +1642,35 @@ function renderResult() {
     root.append(apc);
   }
 
+  const copyResultBtn = btn('Скопировать итог', () => {
+    let text = `Встреча ${m.date}`;
+    if (m.clientName) text += `\nКлиент: ${m.clientName}`;
+    if (m.primaryType) text += `\nОсновной продукт: ${m.primaryType} · ${act(m.AY)}`;
+    if (m.crossType)   text += `\nКросс продукт: ${m.crossType} · ${act(m.AZ)}`;
+    if (m.moreProduct1Type) text += `\nДоп. продукт 1: ${m.moreProduct1Type} · ${act(m.BA)}`;
+    if (m.moreProduct2Type) text += `\nДоп. продукт 2: ${m.moreProduct2Type} · ${act(m.BB)}`;
+    const extCopy=[];
+    if(m.AA)extCopy.push('БС'); if(m.Z)extCopy.push('Инвесткопилка');
+    if(m.AB)extCopy.push('ЦП'); if(m.AO)extCopy.push('Вок');
+    if(m.S)extCopy.push('ФЗ CC1'); if(m.CO)extCopy.push('УП');
+    if(m.AL)extCopy.push('Кэш'); if(m.AM)extCopy.push('Защитник');
+    if(m.AQ)extCopy.push('Смарт'); if(m.AR)extCopy.push('Уст.МП Х5');
+    if(m.AS)extCopy.push('ПДС'); if(m.AT)extCopy.push('Пенсия');
+    if(m.AU)extCopy.push('Комбо 1Р');
+    if(extCopy.length) text += `\nДоп. продажи: ${extCopy.join(', ')}`;
+    if(m.CL!==null&&m.CL!==undefined) text += `\nПриложение (${m.CL===1?'Android':'iPhone'}): ${m.AH===1?'✓ Установлено':'✗ Не установлено'}`;
+    text += `\n\nИтог: ${(m.AV||0).toLocaleString('ru-RU')} ₽`;
+    const done = () => {
+      copyResultBtn.textContent = '✓ Скопировано';
+      setTimeout(()=>{ copyResultBtn.textContent = 'Скопировать итог'; }, 2000);
+    };
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(done).catch(()=>{legacyCopy(text);done();});
+    } else { legacyCopy(text); done(); }
+  }, 'btn-outline btn-full');
   root.append(card(null,
     grid(1,[
+      copyResultBtn,
       btn('▶  Новая встреча', startMtg, 'btn-red btn-full'),
       btn('← Главная',       goHome,   'btn-outline btn-full'),
     ])
