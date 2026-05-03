@@ -624,7 +624,7 @@ function calcEarnings(m, forceBSRate) {
   const dcE = m.E - nerJ;
   const dcM = m.M - nerAct;
   const r = (
-    (dcE - dcM) * 250 + dcM * 310 +
+    (dcE - dcM) * 270 + dcM * 310 +
     (nerJ - nerAct) * 450 + nerAct * 570 +
     (m.O + m.P - m.Q) * 450 + m.Q * 570 +
     m.S * 100 + m.T * 270 +
@@ -632,8 +632,8 @@ function calcEarnings(m, forceBSRate) {
     m.Z * 270 + m.AA * rate + m.AB * 20 +
     m.AC * 430 + m.AD * 270 + m.AE * 570 +
     m.AI * 310 + m.AJ * 430 + m.AK * 570 +
-    m.AL * 10  + m.AM * 100 + m.AN * 430 +
-    m.AP * 230 + m.AQ * 30 + m.AR * 0 +
+    m.AL * 10  + m.AM * 100 + m.AN * 270 +
+    m.AP * 230 + m.AQ * 10 + m.AR * 0 +
     m.AS * 270 + m.AT * 270 + m.AU * 30 +
     m.CO * 270
   ) * 0.87;
