@@ -453,7 +453,7 @@ function renderDailyCard(mtgs) {
     const date = today();
     let text = `📊 Отчёт за: ${date}\n\n`;
     rows.forEach(([l, v]) => { text += `${l}: ${v > 0 ? v : '-'}\n`; });
-    text += `\nИтоговая сумма: ${t.AV}₽`;
+    text += `\nИтоговая сумма: ${(t.AV||0).toLocaleString('ru-RU')}₽`;
     if (t.AA > 0) text += `\n(БС тир: ${mRate}₽/шт, месяц: ${mBS} шт)`;
 
     const done = () => {
