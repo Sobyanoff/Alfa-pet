@@ -1060,27 +1060,20 @@ function renderMeeting() {
   const fn = screenFns[stage];
   if (fn) root.append(fn());
 
-  // Кнопки отмены (всегда снизу)
+  // Кнопки навигации (всегда снизу)
   root.append(card(null,
     grid(2,[
-      btn('🗑 Удалить встречу',()=>{
-        if(confirm('Сбросить текущую встречу?')){meeting=newMeeting();screen='meeting';render();}
-      },'btn-danger'),
       btn('← Назад', backStage, 'btn-gray'),
+      btn('Сбросить',()=>{
+        if(confirm('Сбросить текущую встречу?')){
+          meeting=newMeeting();
+          meeting.AW = getMode() === 'LIST' ? 'LIST_ALL' : 'OP';
+          screen='meeting';render();
+        }
+      },'btn-danger'),
     ])
   ));
   return root;
-}
-
-/* ─── MODE SELECT ─── */
-function renderModeSelect() {
-  const c=card('Режим встречи');
-  c.append(desc('Выберите способ ввода данных:'));
-  c.append(grid(1,[
-    btn('📋  Пошаговый режим', ()=>goStage('OP'), 'btn-red btn-full'),
-    btn('📝  Полный список',   ()=>goStage('LIST_ALL'), 'btn-outline btn-full'),
-  ]));
-  return c;
 }
 
 /* ─── LIST ALL: Полный список ─── */
