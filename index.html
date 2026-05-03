@@ -635,7 +635,7 @@ function renderListAll() {
       if(m.AP>0&&m.CN>0)clearMain();
       else{clearMain();m.AP=1;m.CN=1;m.CM=1;m.primaryType='Отказ банка';}
       rerender();
-    },(m.AP>0&&m.CN>0?'btn-danger':'btn-danger')+' btn-full')
+    },(m.AP>0&&m.CN>0?'btn-danger on':'btn-danger')+' btn-full')
   ));
 
   root.append(mainCard);
