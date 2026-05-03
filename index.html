@@ -1494,6 +1494,7 @@ function renderApp() {
 /* ─── AFTER APP: завершение / доп. продукты ─── */
 function renderAfterApp() {
   const m=meeting;
+  const wrap = el('div',{});
   const c=card('Встреча завершена?');
 
   // Мини-сводка
@@ -1532,7 +1533,21 @@ function renderAfterApp() {
     ));
   }
 
-  return c;
+  wrap.append(c);
+
+  // Превью-сумма (sticky внизу)
+  const previewSum = calcEarnings(m);
+  const preview = el('div',{cls:'preview'});
+  preview.append(
+    el('div',{},
+      el('div',{cls:'preview-label'},'Текущая сумма'),
+      el('div',{cls:'preview-amount'},previewSum.toLocaleString('ru-RU'),el('span',{cls:'ru'},' ₽'))
+    ),
+    el('div',{css:'font-size:22px;opacity:.5'},'→')
+  );
+  wrap.append(preview);
+
+  return wrap;
 }
 
 /* ─── MORE PRODUCTS ─── */
