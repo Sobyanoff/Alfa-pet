@@ -1103,7 +1103,8 @@ function renderResult() {
 function render(keepScroll) {
   const root=document.getElementById('root');
   root.innerHTML='';
-  root.className='fade';
+  root.className = screen !== lastScreen ? 'fade' : '';
+  lastScreen = screen;
   let node;
   if      (screen==='home')    node=renderHome();
   else if (screen==='meeting') node=renderMeeting();
