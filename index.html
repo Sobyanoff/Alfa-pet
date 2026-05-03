@@ -1484,9 +1484,9 @@ function renderApp() {
   const isKKflow=(meeting.O||0)>0||(meeting.P||0)>0;
   c.append(badge(isKKflow?'Шаг 7 из 7':'Шаг 6 из 6'), desc('Установили приложение Альфа-Банк?'));
   c.append(grid(2,[
-    btn('Android  ✓', ()=>{ meeting.CL=1; meeting.AH=1; goStage('AFTER_APP'); },'btn-green'),
+    btn('Android  ✓', ()=>{ meeting.CL=1; meeting.AH=1; goStage('AFTER_APP'); }),
     btn('Android  ✗', ()=>{ meeting.CL=1; meeting.AH=0; goStage('AFTER_APP'); }),
-    btn('iPhone  ✓',  ()=>{ meeting.CL=0; meeting.AH=1; goStage('AFTER_APP'); },'btn-green'),
+    btn('iPhone  ✓',  ()=>{ meeting.CL=0; meeting.AH=1; goStage('AFTER_APP'); }),
     btn('iPhone  ✗',  ()=>{ meeting.CL=0; meeting.AH=0; goStage('AFTER_APP'); }),
   ]));
   return c;
