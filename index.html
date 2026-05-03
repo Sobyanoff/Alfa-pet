@@ -232,13 +232,6 @@ let navStack = [];
 let lastCompleted = null;
 let lastScreen = null;
 
-function navigate(newScreen, resetMeeting) {
-  navStack.push(screen);
-  if (resetMeeting) meeting = null;
-  screen = newScreen;
-  render();
-}
-
 function goBack() {
   const prev = navStack.pop();
   if (!prev || prev === 'home') { meeting = null; screen = 'home'; render(); return; }
