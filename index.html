@@ -636,7 +636,7 @@ function calcEarnings(m, forceBSRate) {
     m.AP * 230 + m.AQ * 10 + m.AR * 0 +
     m.AS * 270 + m.AT * 270 + m.AU * 30 +
     m.CO * 270
-  ) * 0.87;
+  );
   return Math.round(r);
 }
 
@@ -1093,7 +1093,7 @@ function renderListAll() {
     m.M=0;m.N=0;m.AY=0;m.S=0;m.CO=0;m.primaryType=null;
   }
   function setMainAct(val){
-    m.AY=val;
+    m.AY=val; 
     const isDC=['F','G','H','I','J','K','L'].some(k=>m[k]>0);
     const isKK=m.O>0||m.P>0;
     const isSelf=m.AC>0||m.AD>0||m.AE>0;
