@@ -667,7 +667,26 @@ function goBack() {
 }
 
 function goHome()  { navStack = []; meeting = null; screen = 'home'; render(); }
-function startMtg(){ if(navStack.length>50)navStack.shift(); navStack.push(screen); meeting = newMeeting(); screen = 'meeting'; render(); }
+
+function getMode() { return localStorage.getItem('alfa_mode') === 'LIST' ? 'LIST' : 'STEP'; }
+function setMode(m) { localStorage.setItem('alfa_mode', m); }
+
+function startMtg(){
+  if(navStack.length>50)navStack.shift();
+  navStack.push(screen);
+  meeting = newMeeting();
+  meeting.AW = getMode() === 'LIST' ? 'LIST_ALL' : 'OP';
+  screen = 'meeting';
+  render();
+}
+function switchMode(m) {
+  setMode(m);
+  if (!meeting) return;
+  // Переключаем только если ещё не начали ввод
+  const empty = !meeting.primaryType && !meeting.crossType && !meeting.E && !meeting.O && !meeting.P;
+  if (empty) { meeting.AW = m === 'LIST' ? 'LIST_ALL' : 'OP'; meeting.awStack = []; }
+  render();
+}
 
 function completeMtg() {
   if (!meeting) return;
