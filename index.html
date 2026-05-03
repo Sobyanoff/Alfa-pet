@@ -1082,9 +1082,11 @@ function renderResult() {
   }
 
   // Приложение
-  const apc=card('Приложение');
-  apc.append(rrow(m.CL===1?'Android':'iPhone', m.AH===1?'✓ Установлено':'✗ Не установлено'));
-  root.append(apc);
+  if (m.CL !== null && m.CL !== undefined) {
+    const apc=card('Приложение');
+    apc.append(rrow(m.CL===1?'Android':'iPhone', m.AH===1?'✓ Установлено':'✗ Не установлено'));
+    root.append(apc);
+  }
 
   root.append(card(null,
     grid(1,[
