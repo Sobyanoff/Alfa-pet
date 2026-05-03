@@ -359,9 +359,16 @@ function renderHome() {
       const top=el('div',{cls:'hi-top'});
       top.append(
         el('span',{cls:'hi-name'},m.clientName||`${new Date(m.id).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}`),
-        el('span',{cls:'hi-sum'},`${m.AV}₽`)
+        el('span',{cls:'hi-sum'},`${(m.AV||0).toLocaleString('ru-RU')}₽`)
       );
-      t.append(top, el('div',{cls:'hi-sub'},`${m.date}  ·  ${parts.join(', ')||'—'}`));
+      const sub=el('div',{cls:'hi-sub',css:'display:flex;justify-content:space-between;align-items:center'});
+      sub.append(
+        el('span',{},`${m.date}  ·  ${parts.join(', ')||'—'}`),
+        el('button',{cls:'btn btn-sm',css:'padding:1px 6px;font-size:11px;color:var(--danger);background:transparent;border-color:var(--danger);min-width:0',on:()=>{
+          if(confirm('Удалить эту встречу?')){history=history.filter(h=>h.id!==m.id);saveHistory();render();}
+        }},'✕')
+      );
+      t.append(top, sub);
       hCard.append(t);
     });
     hCard.append(el('div',{css:'margin-top:10px'},
