@@ -261,15 +261,21 @@ function setStage(s) { if (meeting) { meeting.AW = s; render(); } }
 function goStage(s) {
   if (!meeting) return;
   meeting.awStack = meeting.awStack || [];
-  meeting.awStack.push(meeting.AW);
+  const {awStack, ...rest} = meeting;
+  meeting.awStack.push({aw: meeting.AW, snapshot: JSON.parse(JSON.stringify(rest))});
   meeting.AW = s;
   render();
 }
 function backStage() {
   if (!meeting) return;
   meeting.awStack = meeting.awStack || [];
-  if (meeting.awStack.length) { meeting.AW = meeting.awStack.pop(); render(); }
-  else goBack();
+  if (meeting.awStack.length) {
+    const entry = meeting.awStack.pop();
+    const remainingStack = meeting.awStack.slice();
+    meeting = Object.assign({}, entry.snapshot);
+    meeting.awStack = remainingStack;
+    render();
+  } else goBack();
 }
 
 // ═══════════════════════════════════════════════════════
