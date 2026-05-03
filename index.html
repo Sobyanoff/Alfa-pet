@@ -674,7 +674,7 @@ function renderListAll() {
     esCard.append(el('div',{cls:'card-title',css:'margin-top:10px;margin-bottom:6px'},'Только для КК'));
     esCard.append(grid(2,[
       btn('ФЗ CC1',()=>{m.S=m.S?0:1;rerender();},m.S?'on':''),
-      btn('УП',()=>{if(m.AP&&m.CO){m.AP=0;m.CO=0;}else{m.AP=1;m.CO=1;}rerender();},m.AP&&m.CO?'on':''),
+      btn('УП',()=>{m.CO=m.CO?0:1;rerender();},m.CO?'on':''),
     ]));
   }
   root.append(esCard);
