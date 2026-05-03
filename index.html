@@ -751,29 +751,58 @@ function rrow(lbl,val) {
 // ═══════════════════════════════════════════════════════
 
 /* ─── HOME ─── */
+function meetingsWord(n) {
+  const m = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 14) return 'встреч';
+  if (m === 1) return 'встреча';
+  if (m >= 2 && m <= 4) return 'встречи';
+  return 'встреч';
+}
+
 function renderHome() {
   const root = el('div',{});
 
-  // Hero
-  root.append(card(null,
-    el('div',{css:'text-align:center;padding:6px 0 2px'},
-      el('div',{css:'font-size:32px;margin-bottom:6px'},'📋'),
-      el('div',{css:'font-size:15px;font-weight:700;margin-bottom:3px'},'Alfa Meeting Tracker'),
-      el('div',{css:'font-size:12px;color:var(--muted);margin-bottom:14px'},
-        'Учёт продуктов · Расчёт вознаграждения'),
-      btn('▶  Начать встречу', startMtg, 'btn-red btn-full'),
-    )
-  ));
-
-  // Daily report
   const todayMtgs = history.filter(m=>m.date===today()&&m.AW==='COMPLETED');
-  if (todayMtgs.length) root.append(renderDailyCard(todayMtgs));
+  const mBS = monthlyBSTotal();
+  const mRate = bsRate(mBS);
+  const sumToday = todayMtgs.reduce((s,m)=>s+calcEarnings(m,mRate),0);
 
-  // History
+  // ── Hero (сводка дня) ──
+  const hero = el('div',{cls:'hero fade'});
+  if (todayMtgs.length === 0) {
+    hero.append(
+      el('div',{cls:'hero-label'},'Готов к работе'),
+      el('div',{cls:'hero-amount zero'},'0',el('span',{cls:'ru'},' ₽')),
+      el('div',{cls:'hero-meta'},
+        el('span',{},'Сегодня встреч пока нет')
+      )
+    );
+  } else {
+    hero.append(
+      el('div',{cls:'hero-label'},'Заработано сегодня'),
+      el('div',{cls:'hero-amount'},sumToday.toLocaleString('ru-RU'),el('span',{cls:'ru'},' ₽')),
+      el('div',{cls:'hero-meta'},
+        el('span',{},el('b',{},String(todayMtgs.length)),' '+meetingsWord(todayMtgs.length)),
+        el('span',{},'БС тир ',el('b',{},mRate+'₽'))
+      )
+    );
+  }
+  hero.append(el('div',{cls:'hero-cta'},
+    el('button',{cls:'cta',on:startMtg},'▶  Начать встречу')
+  ));
+  root.append(hero);
+
+  // ── Дневная детализация (аккордеон) ──
+  if (todayMtgs.length) root.append(renderDailyCard(todayMtgs, mBS, mRate));
+
+  // ── История ──
   const done = history.filter(m=>m.AW==='COMPLETED').slice().reverse();
   const hCard = card('История встреч');
   if (!done.length) {
-    hCard.append(el('div',{cls:'empty'},'Встреч пока нет'));
+    hCard.append(el('div',{cls:'empty'},
+      el('b',{},'Здесь будут ваши встречи'),
+      'После первой завершённой встречи появится итог за день и расчёт вознаграждения'
+    ));
   } else {
     done.slice(0,15).forEach(m=>{
       const parts=[]; if(m.primaryType)parts.push(m.primaryType);
@@ -782,20 +811,20 @@ function renderHome() {
       const top=el('div',{cls:'hi-top'});
       top.append(
         el('span',{cls:'hi-name'},m.clientName||`${new Date(m.id).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}`),
-        el('span',{cls:'hi-sum'},`${(m.AV||0).toLocaleString('ru-RU')}₽`)
+        el('span',{cls:'hi-sum'},`${(m.AV||0).toLocaleString('ru-RU')} ₽`)
       );
-      const sub=el('div',{cls:'hi-sub',css:'display:flex;justify-content:space-between;align-items:center'});
+      const sub=el('div',{cls:'hi-sub'});
       sub.append(
-        el('span',{},`${m.date}  ·  ${parts.join(', ')||'—'}`),
-        el('button',{cls:'btn btn-sm',css:'padding:1px 6px;font-size:11px;color:var(--danger);background:transparent;border-color:var(--danger);min-width:0',on:()=>{
+        el('span',{},`${m.date} · ${parts.join(', ')||'—'}`),
+        el('button',{cls:'hi-del',on:()=>{
           if(confirm('Удалить эту встречу?')){history=history.filter(h=>h.id!==m.id);saveHistory();render();}
         }},'✕')
       );
       t.append(top, sub);
       hCard.append(t);
     });
-    hCard.append(el('div',{css:'margin-top:10px'},
-      btn('🗑  Очистить всю историю', ()=>{
+    hCard.append(el('div',{css:'margin-top:14px'},
+      btn('Очистить всю историю', ()=>{
         if(confirm('Удалить всю историю встреч?')){history=[];saveHistory();render();}
       },'btn-danger btn-full btn-sm')
     ));
@@ -815,10 +844,11 @@ function legacyCopy(text) {
   if (!ok) alert('Не удалось скопировать');
 }
 
-function renderDailyCard(mtgs) {
+function renderDailyCard(mtgs, mBS, mRate) {
   const t = {count: mtgs.length};
-  const keys = 'E,O,P,Q,M,N,R,S,T,U,X,Z,AA,AB,AC,AD,AE,AF,AG,AI,AJ,AK,AL,AM,AN,AO,AP,AQ,AR,AS,AT,AU,AV'.split(',');
+  const keys = 'E,O,P,Q,M,N,R,S,T,U,V,W,X,Y,Z,AA,AB,AC,AD,AE,AF,AG,AI,AJ,AK,AL,AM,AN,AO,AP,AQ,AR,AS,AT,AU,AV'.split(',');
   keys.forEach(k => { t[k] = mtgs.reduce((s, m) => s + (m[k] || 0), 0); });
+  t.AV = mtgs.reduce((s, m) => s + calcEarnings(m, mRate), 0);
 
   const rows = [
     ['Всего встреч',    t.count],
@@ -844,51 +874,83 @@ function renderDailyCard(mtgs) {
     ['Кэш',             t.AL],
     ['Вок на встрече',  t.AO],
   ];
+  const fmt = v => v > 0 ? String(v) : '—';
 
-  // Пересчёт итога по месячному тиру БС
-  const mBS = monthlyBSTotal();
-  const mRate = bsRate(mBS);
-  t.AV = mtgs.reduce((s, m) => s + calcEarnings(m, mRate), 0);
+  const c = card(null);
+  c.style.padding = '6px 18px 14px';
 
-  const fmt = v => v > 0 ? String(v) : '-';
+  // Аккордеон
+  const acc = el('div',{cls:'acc'});
+  const head = el('button',{cls:'acc-head',on:()=>acc.classList.toggle('open')});
+  head.append(
+    el('span',{},`Детализация · ${mtgs.length} ${meetingsWord(mtgs.length)}`),
+    el('span',{cls:'acc-arr'},'▾')
+  );
+  acc.append(head);
 
-  const c = card('Итог за сегодня');
+  const body = el('div',{cls:'acc-body'});
+  const inner = el('div',{cls:'acc-inner'});
 
-  // Индикатор тира БС
-  if (t.AA > 0) {
-    const tierLabel = mRate === 570 ? '🔥 БС тир 21+ → 570₽/шт'
-                    : mRate === 430 ? '⚡ БС тир 11–20 → 430₽/шт'
-                    :                 '📊 БС тир 1–10 → 270₽/шт';
-    const tierColor = mRate === 570 ? 'var(--success)' : mRate === 430 ? 'var(--warn)' : 'var(--muted)';
-    c.append(el('div', {
-      css: `font-size:12px;font-weight:600;color:${tierColor};margin-bottom:8px;padding:4px 8px;background:#f9fafb;border-radius:6px;display:inline-block`
-    }, `${tierLabel}  (всего в месяце: ${mBS} шт)`));
+  // БС-тир с прогресс-баром (показываем всегда, если есть БС в месяце)
+  if (mBS > 0 || t.AA > 0) {
+    const tier = el('div',{cls:'tier'});
+    const isMax = mRate === 570;
+    const nextBoundary = mRate === 270 ? 11 : 21;
+    const pct = isMax ? 100 : Math.min(100, Math.round((mBS / nextBoundary) * 100));
+
+    tier.append(
+      el('div',{cls:'tier-row'},
+        el('span',{cls:'tier-title'},'БС в этом месяце'),
+        el('span',{cls:'tier-rate'},`${mRate} ₽ / шт`)
+      )
+    );
+    const bar = el('div',{cls:'tier-bar'});
+    const fill = el('div',{cls:'tier-bar-fill' + (isMax ? ' tier-max' : '')});
+    fill.style.width = pct + '%';
+    bar.append(fill);
+    tier.append(bar);
+    tier.append(el('div',{cls:'tier-ticks'},
+      el('span',{cls: mRate===270?'cur':''},'1–10 · 270₽'),
+      el('span',{cls: mRate===430?'cur':''},'11–20 · 430₽'),
+      el('span',{cls: mRate===570?'cur':''},'21+ · 570₽'),
+    ));
+    const meta = el('div',{cls:'tier-meta'});
+    if (isMax) {
+      meta.append('Максимальный тир. Накоплено: ', el('b',{},String(mBS)),' шт.');
+    } else {
+      meta.append('Накоплено ', el('b',{},String(mBS)),' шт. До следующего тира: ', el('b',{},String(nextBoundary - mBS)),' шт.');
+    }
+    tier.append(meta);
+    inner.append(tier);
   }
 
   rows.forEach(([l, v]) => {
     const row = rrow(l, fmt(v));
-    if (v === 0) row.style.opacity = '0.45';
-    c.append(row);
+    if (v === 0) row.style.opacity = '0.4';
+    inner.append(row);
   });
-  c.append(el('div', {cls: 'total'}, `${(t.AV||0).toLocaleString('ru-RU')}₽`));
+  inner.append(el('div',{cls:'total'},`${(t.AV||0).toLocaleString('ru-RU')} ₽`));
 
-  const copyBtn = btn('📋  Скопировать итог', () => {
+  const copyBtn = btn('Скопировать итог', () => {
     const date = today();
-    let text = `📊 Отчёт за: ${date}\n\n`;
-    rows.forEach(([l, v]) => { text += `${l}: ${v > 0 ? v : '-'}\n`; });
-    text += `\nИтоговая сумма: ${(t.AV||0).toLocaleString('ru-RU')}₽`;
-    if (t.AA > 0) text += `\n(БС тир: ${mRate}₽/шт, месяц: ${mBS} шт)`;
+    let text = `Отчёт за ${date}\n\n`;
+    rows.forEach(([l, v]) => { text += `${l}: ${v > 0 ? v : '—'}\n`; });
+    text += `\nИтоговая сумма: ${(t.AV||0).toLocaleString('ru-RU')} ₽`;
+    if (t.AA > 0 || mBS > 0) text += `\n(БС тир: ${mRate}₽/шт, месяц: ${mBS} шт)`;
 
     const done = () => {
-      copyBtn.textContent = '✅  Скопировано!';
-      setTimeout(() => { copyBtn.textContent = '📋  Скопировать итог'; }, 2000);
+      copyBtn.textContent = '✓ Скопировано';
+      setTimeout(() => { copyBtn.textContent = 'Скопировать итог'; }, 2000);
     };
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text).then(done).catch(() => { legacyCopy(text); done(); });
     } else { legacyCopy(text); done(); }
   }, 'btn-outline btn-full');
+  inner.append(el('div',{css:'margin-top:10px'},copyBtn));
 
-  c.append(el('div', {css: 'margin-top:10px'}, copyBtn));
+  body.append(inner);
+  acc.append(body);
+  c.append(acc);
   return c;
 }
 
