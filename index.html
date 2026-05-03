@@ -974,22 +974,63 @@ function renderDailyCard(mtgs, mBS, mRate) {
 }
 
 /* ─── MEETING WRAPPER ─── */
+const STEP_PROGRESS = {
+  OP:8, DC_ACT_TR:18, KK_ACT_TR:18, Self_ACT_TR:18,
+  CP:30, KL_ACT_TR:40, KDK_ACT_TR:40, Self_ACT_TR_2:40, Diff_ACT_TR:40,
+  EXTRA_SALES_0:52, EXTRA_SALES_1:62, EXTRA_SALES_2:72, EXTRA_SALES_3:80,
+  APP:88, AFTER_APP:95,
+  MORE_PRODUCT1:90, MORE_PRODUCT2:92,
+  MORE_DC_ACT_TR_1:92, MORE_Self_ACT_TR_1:92, MORE_Diff_ACT_TR_1:92,
+  MORE_DC_ACT_TR_2:94, MORE_Selfe_ACT_TR_2:94, MORE_Diff_ACT_TR_2:94
+};
+
 function renderMeeting() {
   const m = meeting;
   const root = el('div',{});
 
-  // Клиент (только на первом шаге)
-  if (m.AW==='OP') {
-    const nc=card('Клиент (необязательно)');
-    const inp=el('input',{type:'text',placeholder:'Имя клиента...',value:m.clientName});
-    inp.addEventListener('input',e=>m.clientName=e.target.value);
-    nc.append(inp);
-    root.append(nc);
+  const isStartStage = m.AW === 'OP' || m.AW === 'LIST_ALL';
+  const isListMode = m.AW === 'LIST_ALL';
+
+  // Шапка встречи: режим + прогресс + клиент
+  const head = el('div',{cls:'card fade'});
+
+  // Переключатель режима (только пока не начали ввод)
+  const empty = !m.primaryType && !m.crossType && !m.E && !m.O && !m.P;
+  if (empty) {
+    const sw = el('div',{css:'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px'});
+    sw.append(
+      el('span',{cls:'card-title',css:'margin:0'},'Режим ввода'),
+      (() => {
+        const ms = el('div',{cls:'modeswitch'});
+        const b1 = el('button',{cls:isListMode?'':'active',on:()=>switchMode('STEP')},'Пошагово');
+        const b2 = el('button',{cls:isListMode?'active':'',on:()=>switchMode('LIST')},'Списком');
+        ms.append(b1,b2);
+        return ms;
+      })()
+    );
+    head.append(sw);
   }
+
+  // Прогресс-бар (только в пошаговом режиме)
+  if (!isListMode && STEP_PROGRESS[m.AW] !== undefined) {
+    const pr = el('div',{cls:'progress'});
+    const fill = el('div',{cls:'progress-fill'});
+    fill.style.width = STEP_PROGRESS[m.AW] + '%';
+    pr.append(fill);
+    head.append(pr);
+  }
+
+  // Поле имени клиента (на стартовых экранах)
+  if (isStartStage) {
+    const inp=el('input',{type:'text',placeholder:'Имя клиента (необязательно)',value:m.clientName});
+    inp.addEventListener('input',e=>m.clientName=e.target.value);
+    head.append(inp);
+  }
+
+  if (head.children.length) root.append(head);
 
   const stage = m.AW;
   const screenFns = {
-    'MODE_SELECT':     renderModeSelect,
     'LIST_ALL':        renderListAll,
     'OP':              renderOP,
     'DC_ACT_TR':       ()=>renderActTR('Активация / транзакция (DC)',     handleDC),
