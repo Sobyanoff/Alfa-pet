@@ -1045,7 +1045,7 @@ function afterMore(num) {
 
 /* ─── RESULT ─── */
 function renderResult() {
-  const m = history[history.length-1];
+  const m = lastCompleted || history[history.length-1];
   if (!m) { goHome(); return el('div',{}); }
   const root=el('div',{});
   const act=v=>v===2?'ВА+ ТР+':v===1?'ВА+ ТР-':'В+';
