@@ -240,7 +240,7 @@ function goBack() {
 }
 
 function goHome()  { navStack = []; meeting = null; screen = 'home'; render(); }
-function startMtg(){ navStack.push(screen); meeting = newMeeting(); screen = 'meeting'; render(); }
+function startMtg(){ if(navStack.length>50)navStack.shift(); navStack.push(screen); meeting = newMeeting(); screen = 'meeting'; render(); }
 
 function completeMtg() {
   if (!meeting) return;
