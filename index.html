@@ -203,14 +203,15 @@ function calcEarnings(m, forceBSRate) {
     (dcE - dcM) * 250 + dcM * 310 +
     (nerJ - nerAct) * 450 + nerAct * 570 +
     (m.O + m.P - m.Q) * 450 + m.Q * 570 +
-    m.S * 100 + m.T * 270 + m.U * 270 +
+    m.S * 100 + m.T * 270 +
     m.X * 570 +
     m.Z * 270 + m.AA * rate + m.AB * 20 +
     m.AC * 430 + m.AD * 270 + m.AE * 570 +
     m.AI * 310 + m.AJ * 430 + m.AK * 570 +
     m.AL * 10  + m.AM * 100 + m.AN * 430 +
     m.AP * 230 + m.AQ * 30 + m.AR * 0 +
-    m.AS * 270 + m.AT * 270 + m.AU * 30
+    m.AS * 270 + m.AT * 270 + m.AU * 30 +
+    m.CO * 270
   ) * 0.87;
   return Math.round(r);
 }
