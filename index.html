@@ -1051,7 +1051,7 @@ function renderResult() {
   const act=v=>v===2?'ВА+ ТР+':v===1?'ВА+ ТР-':'В+';
 
   const sc=card('Результат встречи');
-  sc.append(el('div',{cls:'total'},`${m.AV} ₽`));
+  sc.append(el('div',{cls:'total'},`${(m.AV||0).toLocaleString('ru-RU')} ₽`));
   if(m.clientName) sc.append(rrow('Клиент', m.clientName));
   sc.append(rrow('Дата', m.date));
   if(m.primaryType) sc.append(rrow('Основной продукт', `${m.primaryType}  ·  ${act(m.AY)}`));
