@@ -924,7 +924,7 @@ function renderES3() {
   c.append(badge('Шаг 6 из 7'), desc('ФЗ CC1 или УП?'));
   c.append(grid(2,[
     btn('ФЗ CC1', ()=>{ meeting.S=1; afterES3(); }),
-    btn('УП',     ()=>{ meeting.AP=1; meeting.CO=1; afterES3(); }),
+    btn('УП',     ()=>{ meeting.CO=1; afterES3(); }),
   ]));
   c.append(el('div',{css:'margin-top:7px'},
     btn('ФЗ CC1 и УП', ()=>{ meeting.S=1; meeting.AP=1; meeting.CO=1; afterES3(); },'btn-full')
