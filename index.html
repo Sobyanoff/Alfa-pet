@@ -178,8 +178,12 @@ function monthlyBSTotal() {
   return history
     .filter(h => h.AW === 'COMPLETED')
     .filter(h => {
-      const p = h.date.split('.');
-      return +p[1] === now.getMonth() + 1 && +p[2] === now.getFullYear();
+      const p = (h.date || '').split('.');
+      if (p.length === 3 && !isNaN(+p[1]) && !isNaN(+p[2])) {
+        return +p[1] === now.getMonth() + 1 && +p[2] === now.getFullYear();
+      }
+      const d = new Date(h.id);
+      return !isNaN(d) && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     })
     .reduce((s, h) => s + (h.AA || 0), 0);
 }
