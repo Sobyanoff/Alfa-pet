@@ -1659,6 +1659,7 @@ function render(keepScroll) {
   root.innerHTML='';
   root.className = screen !== lastScreen ? 'fade' : '';
   lastScreen = screen;
+  document.getElementById('hback').style.visibility = screen === 'home' ? 'hidden' : '';
   let node;
   if      (screen==='home')    node=renderHome();
   else if (screen==='meeting') node=renderMeeting();
