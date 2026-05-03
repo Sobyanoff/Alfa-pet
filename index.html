@@ -927,7 +927,7 @@ function renderES3() {
     btn('УП',     ()=>{ meeting.CO=1; afterES3(); }),
   ]));
   c.append(el('div',{css:'margin-top:7px'},
-    btn('ФЗ CC1 и УП', ()=>{ meeting.S=1; meeting.AP=1; meeting.CO=1; afterES3(); },'btn-full')
+    btn('ФЗ CC1 и УП', ()=>{ meeting.S=1; meeting.CO=1; afterES3(); },'btn-full')
   ));
   c.append(el('div',{css:'margin-top:7px'},
     btn('—  Пропустить', afterES3, 'btn-gray btn-full')
