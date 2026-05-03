@@ -447,7 +447,7 @@ function renderDailyCard(mtgs) {
     if (v === 0) row.style.opacity = '0.45';
     c.append(row);
   });
-  c.append(el('div', {cls: 'total'}, `${t.AV}₽`));
+  c.append(el('div', {cls: 'total'}, `${(t.AV||0).toLocaleString('ru-RU')}₽`));
 
   const copyBtn = btn('📋  Скопировать итог', () => {
     const date = today();
