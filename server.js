@@ -52,9 +52,10 @@ function adminOnly(req, res, next) {
   next();
 }
 
-// POST /api/login { fio }
+// POST /api/login { fio, password? }
+// Сотрудники входят по ФИО. Админ — ФИО + пароль (ADMIN_PASSWORD).
 app.post('/api/login', (req, res) => {
-  const { fio } = req.body || {};
+  const { fio, password } = req.body || {};
   if (!fio) return res.status(400).json({ error: 'fio_required' });
 
   const row = db.prepare(`
@@ -66,6 +67,10 @@ app.post('/api/login', (req, res) => {
   if (!row) return res.status(401).json({ error: 'unknown_employee' });
 
   const role = row.role || 'employee';
+  if (role === 'admin') {
+    if (!password) return res.status(401).json({ error: 'password_required' });
+    if (password !== ADMIN_PASSWORD) return res.status(401).json({ error: 'invalid_password' });
+  }
   const token = signToken({ id: row.id_sotrudnika, fio: row.fio, role });
   res.cookie('alfa_token', token, {
     httpOnly: true,
