@@ -90,25 +90,12 @@ app.post('/api/logout', (req, res) => {
 // GET /api/me
 app.get('/api/me', authRequired, (req, res) => {
   const row = db.prepare(`
-    SELECT s.id_sotrudnika, s.fio, s.otdel, s.dolzhnost, u.role, u.must_change
-    FROM sotrudniki s JOIN users u ON u.id_sotrudnika = s.id_sotrudnika
+    SELECT s.id_sotrudnika, s.fio, s.otdel, s.dolzhnost, u.role
+    FROM sotrudniki s LEFT JOIN users u ON u.id_sotrudnika = s.id_sotrudnika
     WHERE s.id_sotrudnika = ?
   `).get(req.user.id);
   if (!row) return res.status(404).json({ error: 'not_found' });
-  res.json({ ...row, must_change: !!row.must_change });
-});
-
-// POST /api/me/password { old_password, new_password }
-app.post('/api/me/password', authRequired, (req, res) => {
-  const { old_password, new_password } = req.body || {};
-  if (!new_password || new_password.length < 6) return res.status(400).json({ error: 'weak_password' });
-  const u = db.prepare('SELECT password_hash FROM users WHERE id_sotrudnika = ?').get(req.user.id);
-  if (!u || !bcrypt.compareSync(old_password || '', u.password_hash)) {
-    return res.status(401).json({ error: 'invalid_old_password' });
-  }
-  const hash = bcrypt.hashSync(new_password, 10);
-  db.prepare('UPDATE users SET password_hash = ?, must_change = 0 WHERE id_sotrudnika = ?').run(hash, req.user.id);
-  res.json({ ok: true });
+  res.json({ ...row, role: row.role || 'employee' });
 });
 
 // ---------- Встречи ----------
