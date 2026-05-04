@@ -910,8 +910,12 @@ function renderHome() {
       hCard.append(t);
     });
     hCard.append(el('div',{css:'margin-top:14px'},
-      btn('Очистить всю историю', ()=>{
-        if(confirm('Удалить всю историю встреч?')){history=[];saveHistory();render();}
+      btn('Очистить всю историю', async ()=>{
+        if(!confirm('Удалить всю историю встреч?'))return;
+        try{
+          for(const h of history.slice()) { if(h.id) await apiDeleteMeeting(h.id); }
+          history=[]; render();
+        }catch(e){ alert('Ошибка очистки: '+e.message); }
       },'btn-danger btn-full btn-sm')
     ));
   }
