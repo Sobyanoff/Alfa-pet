@@ -548,6 +548,10 @@
     <div class="sub">Войдите, чтобы продолжить</div>
     <label for="li-fio">Сотрудник</label>
     <select id="li-fio"><option value="">— выберите ФИО —</option></select>
+    <div id="li-pwd-wrap" style="display:none">
+      <label for="li-pwd">Пароль администратора</label>
+      <input id="li-pwd" type="password" autocomplete="current-password" placeholder="••••••••" />
+    </div>
     <button id="li-btn" onclick="doLogin()">Войти</button>
     <div class="login-err" id="li-err"></div>
   </div>
