@@ -1767,12 +1767,87 @@ function render(keepScroll) {
 }
 
 // ═══════════════════════════════════════════════════════
+//  AUTH UI
+// ═══════════════════════════════════════════════════════
+function showLogin() {
+  document.getElementById('login').classList.add('show');
+  document.getElementById('hlogout').style.display = 'none';
+  document.getElementById('hsuser').textContent = '';
+  populateFioSelect();
+}
+function hideLogin() {
+  document.getElementById('login').classList.remove('show');
+}
+async function populateFioSelect() {
+  const sel = document.getElementById('li-fio');
+  if (sel.options.length > 1) return;
+  try {
+    const list = await fetch('/api/sotrudniki').then(r => r.json());
+    list.forEach(fio => {
+      const o = document.createElement('option');
+      o.value = fio; o.textContent = fio;
+      sel.appendChild(o);
+    });
+  } catch (e) {}
+}
+async function doLogin() {
+  const fio = document.getElementById('li-fio').value;
+  const pwd = document.getElementById('li-pwd').value;
+  const err = document.getElementById('li-err');
+  const btn = document.getElementById('li-btn');
+  err.textContent = '';
+  if (!fio || !pwd) { err.textContent = 'Выберите ФИО и введите пароль'; return; }
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/login', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ fio, password: pwd })
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(()=>({}));
+      err.textContent = j.error === 'invalid_credentials' ? 'Неверный пароль' : 'Ошибка входа';
+      return;
+    }
+    currentUser = await r.json();
+    document.getElementById('li-pwd').value = '';
+    hideLogin();
+    await bootApp();
+  } catch (e) {
+    err.textContent = 'Сетевая ошибка';
+  } finally {
+    btn.disabled = false;
+  }
+}
+async function doLogout() {
+  try { await fetch('/api/logout', { method:'POST', credentials:'include' }); } catch(e){}
+  currentUser = null; history = []; meeting = null; screen = 'home'; navStack = [];
+  showLogin();
+}
+async function bootApp() {
+  document.getElementById('hlogout').style.display = '';
+  if (currentUser) {
+    const short = (currentUser.fio||'').split(' ').slice(0,2).join(' ');
+    document.getElementById('hsuser').textContent = short + (currentUser.role==='admin'?' · admin':'');
+  }
+  await loadHistory();
+  render();
+}
+document.getElementById('li-pwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// ═══════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════
 document.getElementById('hdate').textContent =
   new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
 
-render();
+(async () => {
+  try {
+    const r = await fetch('/api/me', { credentials:'include' });
+    if (r.ok) { currentUser = await r.json(); await bootApp(); }
+    else { showLogin(); }
+  } catch (e) { showLogin(); }
+})();
 </script>
 </body>
 </html>
