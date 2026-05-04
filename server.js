@@ -8,6 +8,7 @@ const Database = require('better-sqlite3');
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'alfa-tracker-dev-secret-change-me';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'alfa2026';
 const TOKEN_TTL = '30d';
 const DB_PATH = path.join(__dirname, 'alfa_tracker.db');
 
