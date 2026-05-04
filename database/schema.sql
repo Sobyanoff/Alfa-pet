@@ -6,7 +6,7 @@
 PRAGMA foreign_keys = ON;
 
 -- ------------------------------------------------------------
---  Таблица сотрудников
+--  Сотрудники (справочник)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sotrudniki (
     id_sotrudnika   TEXT        PRIMARY KEY,   -- СОТР-001 ... СОТР-040
@@ -17,76 +17,93 @@ CREATE TABLE IF NOT EXISTS sotrudniki (
 );
 
 -- ------------------------------------------------------------
---  Таблица встреч
+--  Пользователи (авторизация)
 -- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS vstrechi (
-    id_vstrechi         TEXT        PRIMARY KEY,   -- ВСТР-0001 ...
-    id_sotrudnika       TEXT        NOT NULL REFERENCES sotrudniki(id_sotrudnika),
-    klient              TEXT        NOT NULL,
-    data_vstrechi       TEXT        NOT NULL,      -- ISO 8601: YYYY-MM-DD
-    tip_vstrechi        TEXT        NOT NULL,
-    kratkoe_opisanie    TEXT        NOT NULL,
-    rezultat            TEXT        NOT NULL,
-    ocenka              INTEGER     NOT NULL CHECK(ocenka BETWEEN 1 AND 10)
+CREATE TABLE IF NOT EXISTS users (
+    id_sotrudnika   TEXT        PRIMARY KEY REFERENCES sotrudniki(id_sotrudnika),
+    password_hash   TEXT        NOT NULL,
+    role            TEXT        NOT NULL DEFAULT 'employee',  -- employee | admin
+    must_change     INTEGER     NOT NULL DEFAULT 1,           -- 1 = смена пароля при первом входе
+    created_at      TEXT        NOT NULL DEFAULT (datetime('now'))
 );
 
 -- ------------------------------------------------------------
---  Индексы для быстрой аналитики
+--  Встречи (фактические данные из приложения)
+--  Поля по буквам Excel-колонок объекта meeting в index.html.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS vstrechi (
+    id_vstrechi     TEXT        PRIMARY KEY,                  -- uuid / timestamp
+    id_sotrudnika   TEXT        NOT NULL REFERENCES sotrudniki(id_sotrudnika),
+    klient          TEXT        NOT NULL,                     -- clientName
+    primary_type    TEXT,                                     -- ДК / КК1 / КК2 / КН / Х5 / DC ИНВ / Селфи ДК / Селфи КК / ДК+Детская
+    aw              TEXT        NOT NULL DEFAULT 'OP',        -- тип встречи (OP)
+    data_vstrechi   TEXT        NOT NULL,                     -- YYYY-MM-DD
+    completed_at    TEXT        NOT NULL,                     -- ISO 8601
+    status          TEXT        NOT NULL DEFAULT 'COMPLETED',
+    f               REAL        NOT NULL DEFAULT 0,
+    g               REAL        NOT NULL DEFAULT 0,
+    h               REAL        NOT NULL DEFAULT 0,
+    i               REAL        NOT NULL DEFAULT 0,
+    j               REAL        NOT NULL DEFAULT 0,
+    k               REAL        NOT NULL DEFAULT 0,
+    l               REAL        NOT NULL DEFAULT 0,
+    e               REAL        NOT NULL DEFAULT 0,           -- F+G+H+I+J+K+L
+    o               REAL        NOT NULL DEFAULT 0,
+    p               REAL        NOT NULL DEFAULT 0,
+    aa              REAL        NOT NULL DEFAULT 0,           -- БС count
+    ak              REAL        NOT NULL DEFAULT 0,
+    av              REAL        NOT NULL DEFAULT 0,           -- итоговое вознаграждение (с НДФЛ)
+    raw_json        TEXT        NOT NULL                       -- полный объект meeting
+);
+
+-- ------------------------------------------------------------
+--  Индексы
 -- ------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_vstrechi_sotrudnik ON vstrechi(id_sotrudnika);
 CREATE INDEX IF NOT EXISTS idx_vstrechi_data      ON vstrechi(data_vstrechi);
-CREATE INDEX IF NOT EXISTS idx_vstrechi_tip       ON vstrechi(tip_vstrechi);
-CREATE INDEX IF NOT EXISTS idx_vstrechi_rezultat  ON vstrechi(rezultat);
+CREATE INDEX IF NOT EXISTS idx_vstrechi_primary   ON vstrechi(primary_type);
 CREATE INDEX IF NOT EXISTS idx_sotrudniki_otdel   ON sotrudniki(otdel);
 
 -- ------------------------------------------------------------
---  Полезные представления (VIEW) для статистики
+--  Представления (статистика)
 -- ------------------------------------------------------------
-
--- Все встречи с ФИО сотрудника
-CREATE VIEW IF NOT EXISTS v_vstrechi_full AS
+DROP VIEW IF EXISTS v_vstrechi_full;
+CREATE VIEW v_vstrechi_full AS
     SELECT
         v.id_vstrechi,
+        s.id_sotrudnika,
         s.fio,
         s.otdel,
         s.dolzhnost,
         v.klient,
+        v.primary_type,
         v.data_vstrechi,
-        v.tip_vstrechi,
-        v.kratkoe_opisanie,
-        v.rezultat,
-        v.ocenka
+        v.completed_at,
+        v.aa,
+        v.av
     FROM vstrechi v
     JOIN sotrudniki s ON s.id_sotrudnika = v.id_sotrudnika;
 
--- Кол-во встреч и средняя оценка по сотруднику
-CREATE VIEW IF NOT EXISTS v_stat_sotrudnik AS
+DROP VIEW IF EXISTS v_stat_sotrudnik;
+CREATE VIEW v_stat_sotrudnik AS
     SELECT
         s.id_sotrudnika,
         s.fio,
         s.otdel,
         COUNT(v.id_vstrechi)        AS vsego_vstrech,
-        ROUND(AVG(v.ocenka), 1)     AS srednyaya_ocenka
+        ROUND(COALESCE(SUM(v.av),0), 2) AS summa_voznagr,
+        ROUND(COALESCE(SUM(v.aa),0), 2) AS summa_bs
     FROM sotrudniki s
     LEFT JOIN vstrechi v ON v.id_sotrudnika = s.id_sotrudnika
     GROUP BY s.id_sotrudnika;
 
--- Кол-во встреч по отделу
-CREATE VIEW IF NOT EXISTS v_stat_otdel AS
+DROP VIEW IF EXISTS v_stat_otdel;
+CREATE VIEW v_stat_otdel AS
     SELECT
         s.otdel,
-        COUNT(v.id_vstrechi)        AS vsego_vstrech,
-        ROUND(AVG(v.ocenka), 1)     AS srednyaya_ocenka
+        COUNT(v.id_vstrechi)            AS vsego_vstrech,
+        ROUND(COALESCE(SUM(v.av),0), 2) AS summa_voznagr
     FROM sotrudniki s
     LEFT JOIN vstrechi v ON v.id_sotrudnika = s.id_sotrudnika
     GROUP BY s.otdel
     ORDER BY vsego_vstrech DESC;
-
--- Топ продуктов по результатам встреч
-CREATE VIEW IF NOT EXISTS v_stat_rezultaty AS
-    SELECT
-        rezultat,
-        COUNT(*) AS kolichestvo
-    FROM vstrechi
-    GROUP BY rezultat
-    ORDER BY kolichestvo DESC;
