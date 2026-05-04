@@ -1800,25 +1800,23 @@ async function populateFioSelect() {
 }
 async function doLogin() {
   const fio = document.getElementById('li-fio').value;
-  const pwd = document.getElementById('li-pwd').value;
   const err = document.getElementById('li-err');
   const btn = document.getElementById('li-btn');
   err.textContent = '';
-  if (!fio || !pwd) { err.textContent = 'Выберите ФИО и введите пароль'; return; }
+  if (!fio) { err.textContent = 'Выберите ФИО'; return; }
   btn.disabled = true;
   try {
     const r = await fetch(API_BASE + '/api/login', {
       method: 'POST', credentials: 'include',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ fio, password: pwd })
+      body: JSON.stringify({ fio })
     });
     if (!r.ok) {
       const j = await r.json().catch(()=>({}));
-      err.textContent = j.error === 'invalid_credentials' ? 'Неверный пароль' : 'Ошибка входа';
+      err.textContent = j.error === 'unknown_employee' ? 'Сотрудник не найден' : 'Ошибка входа';
       return;
     }
     currentUser = await r.json();
-    document.getElementById('li-pwd').value = '';
     hideLogin();
     await bootApp();
   } catch (e) {
