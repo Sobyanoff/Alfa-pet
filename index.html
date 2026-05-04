@@ -1804,23 +1804,39 @@ async function populateFioSelect() {
 }
 async function doLogin() {
   const fio = document.getElementById('li-fio').value;
+  const pwd = document.getElementById('li-pwd').value;
+  const pwdWrap = document.getElementById('li-pwd-wrap');
   const err = document.getElementById('li-err');
   const btn = document.getElementById('li-btn');
   err.textContent = '';
   if (!fio) { err.textContent = 'Выберите ФИО'; return; }
   btn.disabled = true;
   try {
+    const body = { fio };
+    if (pwd) body.password = pwd;
     const r = await fetch(API_BASE + '/api/login', {
       method: 'POST', credentials: 'include',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ fio })
+      body: JSON.stringify(body)
     });
     if (!r.ok) {
       const j = await r.json().catch(()=>({}));
-      err.textContent = j.error === 'unknown_employee' ? 'Сотрудник не найден' : 'Ошибка входа';
+      if (j.error === 'password_required') {
+        pwdWrap.style.display = '';
+        document.getElementById('li-pwd').focus();
+        err.textContent = 'Введите пароль администратора';
+      } else if (j.error === 'invalid_password') {
+        err.textContent = 'Неверный пароль';
+      } else if (j.error === 'unknown_employee') {
+        err.textContent = 'Сотрудник не найден';
+      } else {
+        err.textContent = 'Ошибка входа';
+      }
       return;
     }
     currentUser = await r.json();
+    document.getElementById('li-pwd').value = '';
+    pwdWrap.style.display = 'none';
     hideLogin();
     await bootApp();
   } catch (e) {
