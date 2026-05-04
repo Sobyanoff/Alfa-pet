@@ -1,10 +1,10 @@
-// Инициализация БД: применяет schema.sql, создаёт 40 сотрудников и пользователей
-// с дефолтным паролем 'alfa2024'. Идемпотентно — можно запускать повторно.
+// Инициализация БД: применяет schema.sql, создаёт 40 сотрудников и пользователей.
+// Авторизация без пароля (только по ФИО), поэтому password_hash пишется пустым.
+// Идемпотентно — можно запускать повторно.
 
 const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
-const bcrypt = require('bcryptjs');
 
 const DB_PATH = path.join(__dirname, '..', 'alfa_tracker.db');
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
