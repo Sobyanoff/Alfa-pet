@@ -1809,7 +1809,7 @@ async function doLogin() {
   if (!fio || !pwd) { err.textContent = 'Выберите ФИО и введите пароль'; return; }
   btn.disabled = true;
   try {
-    const r = await fetch('/api/login', {
+    const r = await fetch(API_BASE + '/api/login', {
       method: 'POST', credentials: 'include',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ fio, password: pwd })
