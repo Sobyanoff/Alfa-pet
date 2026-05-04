@@ -1839,7 +1839,7 @@ async function bootApp() {
   await loadHistory();
   render();
 }
-document.getElementById('li-pwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('li-fio').addEventListener('change', () => { if (document.getElementById('li-fio').value) doLogin(); });
 
 // ═══════════════════════════════════════════════════════
 //  INIT
