@@ -51,27 +51,25 @@ function adminOnly(req, res, next) {
   next();
 }
 
-// POST /api/login { fio, password }
+// POST /api/login { fio }
 app.post('/api/login', (req, res) => {
-  const { fio, password } = req.body || {};
-  if (!fio || !password) return res.status(400).json({ error: 'fio_password_required' });
+  const { fio } = req.body || {};
+  if (!fio) return res.status(400).json({ error: 'fio_required' });
 
   const row = db.prepare(`
-    SELECT s.id_sotrudnika, s.fio, s.otdel, s.dolzhnost, u.password_hash, u.role, u.must_change
-    FROM sotrudniki s JOIN users u ON u.id_sotrudnika = s.id_sotrudnika
+    SELECT s.id_sotrudnika, s.fio, s.otdel, s.dolzhnost, u.role
+    FROM sotrudniki s LEFT JOIN users u ON u.id_sotrudnika = s.id_sotrudnika
     WHERE s.fio = ?
   `).get(fio.trim());
 
-  if (!row) return res.status(401).json({ error: 'invalid_credentials' });
-  if (!bcrypt.compareSync(password, row.password_hash)) {
-    return res.status(401).json({ error: 'invalid_credentials' });
-  }
+  if (!row) return res.status(401).json({ error: 'unknown_employee' });
 
-  const token = signToken({ id: row.id_sotrudnika, fio: row.fio, role: row.role });
+  const role = row.role || 'employee';
+  const token = signToken({ id: row.id_sotrudnika, fio: row.fio, role });
   res.cookie('alfa_token', token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: false, // включить true когда будет HTTPS
+    secure: process.env.NODE_ENV === 'production',
     maxAge: 30 * 24 * 60 * 60 * 1000,
   });
   res.json({
@@ -79,8 +77,7 @@ app.post('/api/login', (req, res) => {
     fio: row.fio,
     otdel: row.otdel,
     dolzhnost: row.dolzhnost,
-    role: row.role,
-    must_change: !!row.must_change,
+    role,
   });
 });
 
