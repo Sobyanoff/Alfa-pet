@@ -1782,13 +1782,19 @@ async function populateFioSelect() {
   const sel = document.getElementById('li-fio');
   if (sel.options.length > 1) return;
   try {
-    const list = await fetch('/api/sotrudniki').then(r => r.json());
+    const r = await fetch('/api/sotrudniki');
+    if (!r.ok) throw new Error('http_' + r.status);
+    const list = await r.json();
+    if (!Array.isArray(list) || list.length === 0) throw new Error('empty_list');
     list.forEach(fio => {
       const o = document.createElement('option');
       o.value = fio; o.textContent = fio;
       sel.appendChild(o);
     });
-  } catch (e) {}
+  } catch (e) {
+    sel.options[0].textContent = '⚠ Не удалось загрузить список';
+    document.getElementById('li-err').textContent = 'Сервер недоступен. Запустите: node server.js';
+  }
 }
 async function doLogin() {
   const fio = document.getElementById('li-fio').value;
