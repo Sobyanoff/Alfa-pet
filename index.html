@@ -900,8 +900,10 @@ function renderHome() {
       const sub=el('div',{cls:'hi-sub'});
       sub.append(
         el('span',{},`${m.date} · ${parts.join(', ')||'—'}`),
-        el('button',{cls:'hi-del',on:()=>{
-          if(confirm('Удалить эту встречу?')){history=history.filter(h=>h.id!==m.id);saveHistory();render();}
+        el('button',{cls:'hi-del',on:async ()=>{
+          if(!confirm('Удалить эту встречу?'))return;
+          try{ await apiDeleteMeeting(m.id); }catch(e){ alert('Ошибка удаления: '+e.message); return; }
+          history=history.filter(h=>h.id!==m.id); render();
         }},'✕')
       );
       t.append(top, sub);
