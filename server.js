@@ -1,8 +1,8 @@
 // Alfa Tracker — Express + better-sqlite3 + JWT auth (httpOnly cookie)
+// Авторизация: только по ФИО (выбор из списка). Пароля нет — упрощено по запросу.
 const path = require('path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Database = require('better-sqlite3');
 
