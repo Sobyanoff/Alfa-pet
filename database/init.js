@@ -6,7 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
 
-const DB_PATH = path.join(__dirname, '..', 'alfa_tracker.db');
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'alfa_tracker.db');
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
 
 const SOTRUDNIKI = [
