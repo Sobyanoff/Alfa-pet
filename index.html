@@ -683,6 +683,10 @@ let history = [];
 let currentUser = null;
 
 // API helpers — все встречи теперь хранятся на сервере
+// Если страница открыта не с http://localhost:3000 (например, через file:// или Live Server),
+// относительные пути типа /api/... не попадут на Express — нужен абсолютный URL.
+const API_BASE = (location.protocol === 'http:' || location.protocol === 'https:') && location.port === '3000'
+  ? '' : 'http://localhost:3000';
 async function apiFetch(url, opts) {
   opts = opts || {};
   opts.credentials = 'include';
@@ -690,7 +694,7 @@ async function apiFetch(url, opts) {
     opts.headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
     opts.body = JSON.stringify(opts.body);
   }
-  const r = await fetch(url, opts);
+  const r = await fetch(API_BASE + url, opts);
   if (r.status === 401) { showLogin(); throw new Error('unauthorized'); }
   if (!r.ok) throw new Error('api_' + r.status);
   return r.status === 204 ? null : r.json();
