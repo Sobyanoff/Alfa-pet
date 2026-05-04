@@ -1859,7 +1859,13 @@ async function bootApp() {
   await loadHistory();
   render();
 }
-document.getElementById('li-fio').addEventListener('change', () => { if (document.getElementById('li-fio').value) doLogin(); });
+document.getElementById('li-fio').addEventListener('change', () => {
+  document.getElementById('li-pwd-wrap').style.display = 'none';
+  document.getElementById('li-pwd').value = '';
+  document.getElementById('li-err').textContent = '';
+  if (document.getElementById('li-fio').value) doLogin();
+});
+document.getElementById('li-pwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
 // ═══════════════════════════════════════════════════════
 //  INIT
