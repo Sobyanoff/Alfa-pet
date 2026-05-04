@@ -33,6 +33,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// GET /api/health — для мониторинга/UptimeRobot
+app.get('/api/health', (req, res) => {
+  try {
+    db.prepare('SELECT 1').get();
+    res.json({ ok: true, ts: new Date().toISOString() });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'db_unavailable' });
+  }
+});
+
 // ---------- Авторизация ----------
 function signToken(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_TTL });
