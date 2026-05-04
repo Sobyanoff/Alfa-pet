@@ -679,15 +679,37 @@ function calcEarnings(m, forceBSRate) {
 // ═══════════════════════════════════════════════════════
 let meeting = null;
 let screen  = 'home';
-let history;
-try { history = JSON.parse(localStorage.getItem('alfa_h') || '[]'); }
-catch(e) { console.warn('alfa_h corrupt, resetting:', e); history = []; }
-if (!Array.isArray(history)) history = [];
+let history = [];
+let currentUser = null;
 
-function saveHistory() {
-  try { localStorage.setItem('alfa_h', JSON.stringify(history)); }
-  catch(e) { alert('Хранилище переполнено, очистите часть истории'); }
+// API helpers — все встречи теперь хранятся на сервере
+async function apiFetch(url, opts) {
+  opts = opts || {};
+  opts.credentials = 'include';
+  if (opts.body && typeof opts.body !== 'string') {
+    opts.headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
+    opts.body = JSON.stringify(opts.body);
+  }
+  const r = await fetch(url, opts);
+  if (r.status === 401) { showLogin(); throw new Error('unauthorized'); }
+  if (!r.ok) throw new Error('api_' + r.status);
+  return r.status === 204 ? null : r.json();
 }
+async function loadHistory() {
+  try { history = await apiFetch('/api/vstrechi'); }
+  catch(e) { history = []; }
+  if (!Array.isArray(history)) history = [];
+}
+async function apiSaveMeeting(m) {
+  const res = await apiFetch('/api/vstrechi', { method:'POST', body: m });
+  return res && res.id;
+}
+async function apiDeleteMeeting(id) {
+  await apiFetch('/api/vstrechi/' + encodeURIComponent(id), { method:'DELETE' });
+}
+// Совместимость со старым кодом: history теперь синхронизуется через API,
+// saveHistory оставлена как no-op (фактическая запись — внутри completeMtg/удаления)
+function saveHistory() {}
 function today() { return new Date().toLocaleDateString('ru-RU'); }
 
 let navStack = [];
