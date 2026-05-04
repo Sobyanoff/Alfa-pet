@@ -745,7 +745,7 @@ function switchMode(m) {
   render();
 }
 
-function completeMtg() {
+async function completeMtg() {
   if (!meeting) return;
   const hasAny = meeting.primaryType || meeting.E > 0 || meeting.O > 0 || meeting.P > 0 || meeting.AA > 0;
   if (!hasAny && !confirm('Сохранить пустую встречу?')) return;
@@ -753,9 +753,17 @@ function completeMtg() {
   meeting.E  = meeting.F+meeting.G+meeting.H+meeting.I+meeting.J+meeting.K+meeting.L;
   meeting.AV = calcEarnings(meeting);
   meeting.AW = 'COMPLETED';
+  meeting.status = 'COMPLETED';
+  meeting.completedAt = new Date().toISOString();
   lastCompleted = JSON.parse(JSON.stringify(meeting));
-  history.push(lastCompleted);
-  saveHistory();
+  try {
+    const id = await apiSaveMeeting(lastCompleted);
+    if (id) lastCompleted.id = id;
+    history.push(lastCompleted);
+  } catch (e) {
+    alert('Не удалось сохранить встречу на сервере: ' + e.message);
+    return;
+  }
   screen = 'result';
   render();
 }
