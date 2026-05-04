@@ -1853,7 +1853,7 @@ document.getElementById('hdate').textContent =
 
 (async () => {
   try {
-    const r = await fetch('/api/me', { credentials:'include' });
+    const r = await fetch(API_BASE + '/api/me', { credentials:'include' });
     if (r.ok) { currentUser = await r.json(); await bootApp(); }
     else { showLogin(); }
   } catch (e) { showLogin(); }
