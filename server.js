@@ -19,6 +19,19 @@ const app = express();
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 
+// CORS — разрешаем запросы с file:// и других локальных origin (Live Server и т.п.),
+// чтобы fetch с credentials работал, когда страница открыта не через http://localhost:3000.
+app.use((req, res, next) => {
+  const origin = req.headers.origin || 'null';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  next();
+});
+
 // ---------- Авторизация ----------
 function signToken(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_TTL });
