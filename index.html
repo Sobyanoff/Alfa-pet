@@ -1786,7 +1786,7 @@ async function populateFioSelect() {
   const sel = document.getElementById('li-fio');
   if (sel.options.length > 1) return;
   try {
-    const r = await fetch('/api/sotrudniki');
+    const r = await fetch(API_BASE + '/api/sotrudniki');
     if (!r.ok) throw new Error('http_' + r.status);
     const list = await r.json();
     if (!Array.isArray(list) || list.length === 0) throw new Error('empty_list');
