@@ -522,15 +522,49 @@
       *, *::before, *::after { animation: none !important; transition: none !important; }
     }
   </style>
+<style>
+/* Login overlay */
+.login-overlay{position:fixed;inset:0;background:#0A0A0F;color:#F7F7FA;display:none;align-items:center;justify-content:center;z-index:9999;padding:20px}
+.login-overlay.show{display:flex}
+.login-card{background:#fff;color:#0A0A0F;width:100%;max-width:380px;border-radius:18px;padding:24px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.login-card h2{margin:0 0 6px;font-size:22px}
+.login-card .sub{color:#7a7a85;font-size:13px;margin-bottom:18px}
+.login-card label{display:block;font-size:13px;color:#0A0A0F;margin:10px 0 6px;font-weight:600}
+.login-card select,.login-card input{width:100%;border:1px solid #E5E7EB;border-radius:14px;padding:12px 14px;font-size:15px;background:#F7F7FA;box-sizing:border-box;font-family:inherit}
+.login-card select:focus,.login-card input:focus{outline:2px solid #EF3124;background:#fff}
+.login-card button{width:100%;background:#EF3124;color:#fff;border:0;border-radius:14px;padding:14px;font-size:16px;font-weight:700;margin-top:18px;cursor:pointer}
+.login-card button:disabled{opacity:.5;cursor:wait}
+.login-err{color:#EF3124;font-size:13px;margin-top:10px;min-height:18px}
+.logout-btn{background:transparent;border:1px solid rgba(247,247,250,.3);color:#F7F7FA;border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer;margin-left:8px}
+.user-pill{font-size:11px;color:rgba(247,247,250,.7);margin-top:2px}
+</style>
 </head>
 <body>
+
+<!-- Экран логина (поверх приложения) -->
+<div id="login" class="login-overlay">
+  <div class="login-card">
+    <h2>Alfa Tracker</h2>
+    <div class="sub">Войдите, чтобы продолжить</div>
+    <label for="li-fio">Сотрудник</label>
+    <select id="li-fio"><option value="">— выберите ФИО —</option></select>
+    <label for="li-pwd">Пароль</label>
+    <input id="li-pwd" type="password" autocomplete="current-password" placeholder="••••••••" />
+    <button id="li-btn" onclick="doLogin()">Войти</button>
+    <div class="login-err" id="li-err"></div>
+  </div>
+</div>
 
 <header>
   <div>
     <h1>Alfa <b>Tracker</b></h1>
     <div class="hmeta" id="hdate"></div>
+    <div class="user-pill" id="hsuser"></div>
   </div>
-  <button class="hback" id="hback" onclick="goBack()">← Назад</button>
+  <div>
+    <button class="hback" id="hback" onclick="goBack()">← Назад</button>
+    <button class="logout-btn" id="hlogout" onclick="doLogout()" style="display:none">Выход</button>
+  </div>
 </header>
 
 <div class="wrap"><div id="root" class="fade"></div></div>
