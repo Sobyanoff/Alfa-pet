@@ -83,19 +83,17 @@ const insSotr = db.prepare(
   'INSERT OR IGNORE INTO sotrudniki (id_sotrudnika, fio, otdel, dolzhnost, email) VALUES (?, ?, ?, ?, ?)'
 );
 
-// 3. Пользователи (bcrypt пароль 'alfa2024')
-const DEFAULT_PASSWORD = 'alfa2024';
-const passwordHash = bcrypt.hashSync(DEFAULT_PASSWORD, 10);
+// 3. Пользователи (без пароля, только роль)
 const insUser = db.prepare(
-  "INSERT OR IGNORE INTO users (id_sotrudnika, password_hash, role, must_change) VALUES (?, ?, 'employee', 1)"
+  "INSERT OR IGNORE INTO users (id_sotrudnika, password_hash, role, must_change) VALUES (?, '', 'employee', 0)"
 );
 
 const tx = db.transaction(() => {
   for (const [id, fio, otdel, dolzhnost] of SOTRUDNIKI) {
     insSotr.run(id, fio, otdel, dolzhnost, emailFromFio(fio));
-    insUser.run(id, passwordHash);
+    insUser.run(id);
   }
-  // Админ — первый сотрудник в списке (можно изменить вручную)
+  // Админ — Бязров С.Э. (можно изменить вручную)
   db.prepare("UPDATE users SET role='admin' WHERE id_sotrudnika='СОТР-002'").run();
 });
 tx();
@@ -103,7 +101,7 @@ tx();
 const cntS = db.prepare('SELECT COUNT(*) AS c FROM sotrudniki').get().c;
 const cntU = db.prepare('SELECT COUNT(*) AS c FROM users').get().c;
 console.log(`[init] sotrudniki: ${cntS}, users: ${cntU}`);
-console.log(`[init] default password for all users: ${DEFAULT_PASSWORD}`);
+console.log(`[init] auth: только по ФИО, пароль не требуется`);
 console.log(`[init] admin: СОТР-002 (Бязров С.Э.)`);
 console.log(`[init] DB ready at ${DB_PATH}`);
 
