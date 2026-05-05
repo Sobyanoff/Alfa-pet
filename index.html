@@ -761,6 +761,7 @@ function completeMtg() {
   if (!meeting) return;
   const hasAny = meeting.primaryType || meeting.E > 0 || meeting.O > 0 || meeting.P > 0 || meeting.AA > 0;
   if (!hasAny && !confirm('Сохранить пустую встречу?')) return;
+  if (SHEETS_URL) getEmployee();
   meeting.date = today();
   meeting.E  = meeting.F+meeting.G+meeting.H+meeting.I+meeting.J+meeting.K+meeting.L;
   meeting.AV = calcEarnings(meeting);
@@ -768,6 +769,7 @@ function completeMtg() {
   lastCompleted = JSON.parse(JSON.stringify(meeting));
   history.push(lastCompleted);
   saveHistory();
+  sendToSheets(buildSheetPayload(lastCompleted));
   screen = 'result';
   render();
 }
