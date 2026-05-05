@@ -537,6 +537,74 @@
 
 <script>
 // ═══════════════════════════════════════════════════════
+//  ТЕЛЕМЕТРИЯ → GOOGLE SHEETS
+// ═══════════════════════════════════════════════════════
+// Вставь сюда URL развёрнутого Google Apps Script Web App
+// (см. инструкцию в чате). Если оставить пустым — отправка отключена.
+const SHEETS_URL = '';
+
+function getEmployee() {
+  let n = (localStorage.getItem('alfa_user') || '').trim();
+  while (!n) {
+    n = (prompt('Введите ваше имя (фамилия + имя). Это нужно один раз — данные о встречах будут уходить руководителю.') || '').trim();
+  }
+  localStorage.setItem('alfa_user', n);
+  return n;
+}
+
+function productsLine(m) {
+  const items = [];
+  const add = (lbl, v) => { if (v > 0) items.push(`${lbl}×${v}`); };
+  add('DC', m.E);
+  add('CC1', m.O); add('CC2', m.P);
+  add('БС', m.AA); add('ЦП', m.AB); add('Инв', m.Z);
+  add('СелфиN2B', m.AC); add('СелфиOLD', (m.AD||0)+(m.AE||0));
+  add('МП', m.AI); add('НК', m.AK);
+  add('Кэш', m.AL); add('Пенсия', m.AT); add('ПДС', m.AS); add('Смарт', m.AQ);
+  add('Вок', m.AO); add('КроссКидс', m.AN); add('КроссСИМ', m.AJ);
+  add('Комбо', m.AU); add('КЛ/ККК', m.X); add('УП/Отказ', m.AP);
+  return items.join(', ') || '—';
+}
+
+function buildSheetPayload(m) {
+  return {
+    employee: localStorage.getItem('alfa_user') || '',
+    date: m.date || '',
+    ts: m.id || Date.now(),
+    client: m.clientName || '',
+    products: productsLine(m),
+    AV: m.AV || 0
+  };
+}
+
+function sendToSheets(payload) {
+  if (!SHEETS_URL) return; // не настроено — молча выходим
+  const body = JSON.stringify(payload);
+  fetch(SHEETS_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body
+  }).catch(() => {
+    // сеть упала — копим в outbox для повтора
+    try {
+      const q = JSON.parse(localStorage.getItem('alfa_outbox') || '[]');
+      q.push(payload);
+      localStorage.setItem('alfa_outbox', JSON.stringify(q));
+    } catch (e) {}
+  });
+}
+
+function flushOutbox() {
+  if (!SHEETS_URL) return;
+  let q;
+  try { q = JSON.parse(localStorage.getItem('alfa_outbox') || '[]'); } catch (e) { return; }
+  if (!Array.isArray(q) || !q.length) return;
+  localStorage.setItem('alfa_outbox', '[]');
+  q.forEach(p => sendToSheets(p));
+}
+
+// ═══════════════════════════════════════════════════════
 //  DATA MODEL
 // ═══════════════════════════════════════════════════════
 function newMeeting() {
