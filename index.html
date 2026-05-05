@@ -522,51 +522,15 @@
       *, *::before, *::after { animation: none !important; transition: none !important; }
     }
   </style>
-<style>
-/* Login overlay */
-.login-overlay{position:fixed;inset:0;background:#0A0A0F;color:#F7F7FA;display:none;align-items:center;justify-content:center;z-index:9999;padding:20px}
-.login-overlay.show{display:flex}
-.login-card{background:#fff;color:#0A0A0F;width:100%;max-width:380px;border-radius:18px;padding:24px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
-.login-card h2{margin:0 0 6px;font-size:22px}
-.login-card .sub{color:#7a7a85;font-size:13px;margin-bottom:18px}
-.login-card label{display:block;font-size:13px;color:#0A0A0F;margin:10px 0 6px;font-weight:600}
-.login-card select,.login-card input{width:100%;border:1px solid #E5E7EB;border-radius:14px;padding:12px 14px;font-size:15px;background:#F7F7FA;box-sizing:border-box;font-family:inherit}
-.login-card select:focus,.login-card input:focus{outline:2px solid #EF3124;background:#fff}
-.login-card button{width:100%;background:#EF3124;color:#fff;border:0;border-radius:14px;padding:14px;font-size:16px;font-weight:700;margin-top:18px;cursor:pointer}
-.login-card button:disabled{opacity:.5;cursor:wait}
-.login-err{color:#EF3124;font-size:13px;margin-top:10px;min-height:18px}
-.logout-btn{background:transparent;border:1px solid rgba(247,247,250,.3);color:#F7F7FA;border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer;margin-left:8px}
-.user-pill{font-size:11px;color:rgba(247,247,250,.7);margin-top:2px}
-</style>
 </head>
 <body>
-
-<!-- Экран логина (поверх приложения) -->
-<div id="login" class="login-overlay">
-  <div class="login-card">
-    <h2>Alfa Tracker</h2>
-    <div class="sub">Войдите, чтобы продолжить</div>
-    <label for="li-fio">Сотрудник</label>
-    <select id="li-fio"><option value="">— выберите ФИО —</option></select>
-    <div id="li-pwd-wrap" style="display:none">
-      <label for="li-pwd">Пароль администратора</label>
-      <input id="li-pwd" type="password" autocomplete="current-password" placeholder="••••••••" />
-    </div>
-    <button id="li-btn" onclick="doLogin()">Войти</button>
-    <div class="login-err" id="li-err"></div>
-  </div>
-</div>
 
 <header>
   <div>
     <h1>Alfa <b>Tracker</b></h1>
     <div class="hmeta" id="hdate"></div>
-    <div class="user-pill" id="hsuser"></div>
   </div>
-  <div>
-    <button class="hback" id="hback" onclick="goBack()">← Назад</button>
-    <button class="logout-btn" id="hlogout" onclick="doLogout()" style="display:none">Выход</button>
-  </div>
+  <button class="hback" id="hback" onclick="goBack()">← Назад</button>
 </header>
 
 <div class="wrap"><div id="root" class="fade"></div></div>
@@ -681,41 +645,15 @@ function calcEarnings(m, forceBSRate) {
 // ═══════════════════════════════════════════════════════
 let meeting = null;
 let screen  = 'home';
-let history = [];
-let currentUser = null;
+let history;
+try { history = JSON.parse(localStorage.getItem('alfa_h') || '[]'); }
+catch(e) { console.warn('alfa_h corrupt, resetting:', e); history = []; }
+if (!Array.isArray(history)) history = [];
 
-// API helpers — все встречи теперь хранятся на сервере
-// Если страница открыта не с http://localhost:3000 (например, через file:// или Live Server),
-// относительные пути типа /api/... не попадут на Express — нужен абсолютный URL.
-const API_BASE = (location.protocol === 'http:' || location.protocol === 'https:') && location.port === '3000'
-  ? '' : 'http://localhost:3000';
-async function apiFetch(url, opts) {
-  opts = opts || {};
-  opts.credentials = 'include';
-  if (opts.body && typeof opts.body !== 'string') {
-    opts.headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
-    opts.body = JSON.stringify(opts.body);
-  }
-  const r = await fetch(API_BASE + url, opts);
-  if (r.status === 401) { showLogin(); throw new Error('unauthorized'); }
-  if (!r.ok) throw new Error('api_' + r.status);
-  return r.status === 204 ? null : r.json();
+function saveHistory() {
+  try { localStorage.setItem('alfa_h', JSON.stringify(history)); }
+  catch(e) { alert('Хранилище переполнено, очистите часть истории'); }
 }
-async function loadHistory() {
-  try { history = await apiFetch('/api/vstrechi'); }
-  catch(e) { history = []; }
-  if (!Array.isArray(history)) history = [];
-}
-async function apiSaveMeeting(m) {
-  const res = await apiFetch('/api/vstrechi', { method:'POST', body: m });
-  return res && res.id;
-}
-async function apiDeleteMeeting(id) {
-  await apiFetch('/api/vstrechi/' + encodeURIComponent(id), { method:'DELETE' });
-}
-// Совместимость со старым кодом: history теперь синхронизуется через API,
-// saveHistory оставлена как no-op (фактическая запись — внутри completeMtg/удаления)
-function saveHistory() {}
 function today() { return new Date().toLocaleDateString('ru-RU'); }
 
 let navStack = [];
@@ -751,7 +689,7 @@ function switchMode(m) {
   render();
 }
 
-async function completeMtg() {
+function completeMtg() {
   if (!meeting) return;
   const hasAny = meeting.primaryType || meeting.E > 0 || meeting.O > 0 || meeting.P > 0 || meeting.AA > 0;
   if (!hasAny && !confirm('Сохранить пустую встречу?')) return;
@@ -759,17 +697,9 @@ async function completeMtg() {
   meeting.E  = meeting.F+meeting.G+meeting.H+meeting.I+meeting.J+meeting.K+meeting.L;
   meeting.AV = calcEarnings(meeting);
   meeting.AW = 'COMPLETED';
-  meeting.status = 'COMPLETED';
-  meeting.completedAt = new Date().toISOString();
   lastCompleted = JSON.parse(JSON.stringify(meeting));
-  try {
-    const id = await apiSaveMeeting(lastCompleted);
-    if (id) lastCompleted.id = id;
-    history.push(lastCompleted);
-  } catch (e) {
-    alert('Не удалось сохранить встречу на сервере: ' + e.message);
-    return;
-  }
+  history.push(lastCompleted);
+  saveHistory();
   screen = 'result';
   render();
 }
@@ -906,22 +836,16 @@ function renderHome() {
       const sub=el('div',{cls:'hi-sub'});
       sub.append(
         el('span',{},`${m.date} · ${parts.join(', ')||'—'}`),
-        el('button',{cls:'hi-del',on:async ()=>{
-          if(!confirm('Удалить эту встречу?'))return;
-          try{ await apiDeleteMeeting(m.id); }catch(e){ alert('Ошибка удаления: '+e.message); return; }
-          history=history.filter(h=>h.id!==m.id); render();
+        el('button',{cls:'hi-del',on:()=>{
+          if(confirm('Удалить эту встречу?')){history=history.filter(h=>h.id!==m.id);saveHistory();render();}
         }},'✕')
       );
       t.append(top, sub);
       hCard.append(t);
     });
     hCard.append(el('div',{css:'margin-top:14px'},
-      btn('Очистить всю историю', async ()=>{
-        if(!confirm('Удалить всю историю встреч?'))return;
-        try{
-          for(const h of history.slice()) { if(h.id) await apiDeleteMeeting(h.id); }
-          history=[]; render();
-        }catch(e){ alert('Ошибка очистки: '+e.message); }
+      btn('Очистить всю историю', ()=>{
+        if(confirm('Удалить всю историю встреч?')){history=[];saveHistory();render();}
       },'btn-danger btn-full btn-sm')
     ));
   }
@@ -1773,113 +1697,12 @@ function render(keepScroll) {
 }
 
 // ═══════════════════════════════════════════════════════
-//  AUTH UI
-// ═══════════════════════════════════════════════════════
-function showLogin() {
-  document.getElementById('login').classList.add('show');
-  document.getElementById('hlogout').style.display = 'none';
-  document.getElementById('hsuser').textContent = '';
-  populateFioSelect();
-}
-function hideLogin() {
-  document.getElementById('login').classList.remove('show');
-}
-async function populateFioSelect() {
-  const sel = document.getElementById('li-fio');
-  if (sel.options.length > 1) return;
-  try {
-    const r = await fetch(API_BASE + '/api/sotrudniki');
-    if (!r.ok) throw new Error('http_' + r.status);
-    const list = await r.json();
-    if (!Array.isArray(list) || list.length === 0) throw new Error('empty_list');
-    list.forEach(fio => {
-      const o = document.createElement('option');
-      o.value = fio; o.textContent = fio;
-      sel.appendChild(o);
-    });
-  } catch (e) {
-    sel.options[0].textContent = '⚠ Не удалось загрузить список';
-    document.getElementById('li-err').textContent = 'Сервер недоступен. Запустите: node server.js';
-  }
-}
-async function doLogin() {
-  const fio = document.getElementById('li-fio').value;
-  const pwd = document.getElementById('li-pwd').value;
-  const pwdWrap = document.getElementById('li-pwd-wrap');
-  const err = document.getElementById('li-err');
-  const btn = document.getElementById('li-btn');
-  err.textContent = '';
-  if (!fio) { err.textContent = 'Выберите ФИО'; return; }
-  btn.disabled = true;
-  try {
-    const body = { fio };
-    if (pwd) body.password = pwd;
-    const r = await fetch(API_BASE + '/api/login', {
-      method: 'POST', credentials: 'include',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(body)
-    });
-    if (!r.ok) {
-      const j = await r.json().catch(()=>({}));
-      if (j.error === 'password_required') {
-        pwdWrap.style.display = '';
-        document.getElementById('li-pwd').focus();
-        err.textContent = 'Введите пароль администратора';
-      } else if (j.error === 'invalid_password') {
-        err.textContent = 'Неверный пароль';
-      } else if (j.error === 'unknown_employee') {
-        err.textContent = 'Сотрудник не найден';
-      } else {
-        err.textContent = 'Ошибка входа';
-      }
-      return;
-    }
-    currentUser = await r.json();
-    document.getElementById('li-pwd').value = '';
-    pwdWrap.style.display = 'none';
-    hideLogin();
-    await bootApp();
-  } catch (e) {
-    err.textContent = 'Сетевая ошибка';
-  } finally {
-    btn.disabled = false;
-  }
-}
-async function doLogout() {
-  try { await fetch(API_BASE + '/api/logout', { method:'POST', credentials:'include' }); } catch(e){}
-  currentUser = null; history = []; meeting = null; screen = 'home'; navStack = [];
-  showLogin();
-}
-async function bootApp() {
-  document.getElementById('hlogout').style.display = '';
-  if (currentUser) {
-    const short = (currentUser.fio||'').split(' ').slice(0,2).join(' ');
-    document.getElementById('hsuser').textContent = short + (currentUser.role==='admin'?' · admin':'');
-  }
-  await loadHistory();
-  render();
-}
-document.getElementById('li-fio').addEventListener('change', () => {
-  document.getElementById('li-pwd-wrap').style.display = 'none';
-  document.getElementById('li-pwd').value = '';
-  document.getElementById('li-err').textContent = '';
-  if (document.getElementById('li-fio').value) doLogin();
-});
-document.getElementById('li-pwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-
-// ═══════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════
 document.getElementById('hdate').textContent =
   new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
 
-(async () => {
-  try {
-    const r = await fetch(API_BASE + '/api/me', { credentials:'include' });
-    if (r.ok) { currentUser = await r.json(); await bootApp(); }
-    else { showLogin(); }
-  } catch (e) { showLogin(); }
-})();
+render();
 </script>
 </body>
 </html>

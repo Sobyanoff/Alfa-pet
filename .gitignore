@@ -13,14 +13,3 @@ $RECYCLE.BIN/
 *.pem
 secrets.*
 config.local.*
-
-# Node
-node_modules/
-package-lock.json
-npm-debug.log*
-
-# SQLite
-*.db
-*.db-journal
-*.db-wal
-*.db-shm
