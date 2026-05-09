@@ -1232,8 +1232,9 @@ function renderAdmin() {
   );
   root.append(panel);
 
-  if (offlineMode || !adminState.products) {
-    root.append(card('Отчёт', el('div',{cls:'empty'}, offlineMode ? 'Локальный режим — отчёт недоступен' : 'Загрузка…')));
+  if (!adminState.products) {
+    const msg = adminState.loadError || 'Загрузка…';
+    root.append(card('Отчёт', el('div',{cls:'empty'}, msg)));
     return root;
   }
 
