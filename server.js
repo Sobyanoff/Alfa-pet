@@ -807,14 +807,15 @@ function buildDayList(month) {
   return days;
 }
 
-app.get('/api/admin/stat/products', authRequired, adminOnly, (req, res) => {
-  const month = String(req.query.month || new Date().toISOString().slice(0, 7));
-  if (!/^\d{4}-\d{2}$/.test(month)) return res.status(400).json({ error: 'invalid_month' });
-  const days = buildDayList(month);
-  const from = days[0];
-  const to = days[days.length - 1];
-  const rows = getMeetingsInRange(from, to);
+function buildProductReport(from, to) {
+  const days = [];
+  const start = Date.parse(`${from}T00:00:00.000Z`);
+  const end = Date.parse(`${to}T00:00:00.000Z`);
+  for (let t = start; t <= end; t += 86400000) {
+    days.push(new Date(t).toISOString().slice(0, 10));
+  }
 
+  const rows = getMeetingsInRange(from, to);
   const meetingsByDay = new Map(days.map(d => [d, []]));
   rows.forEach(row => {
     let parsed = {};
@@ -864,12 +865,19 @@ app.get('/api/admin/stat/products', authRequired, adminOnly, (req, res) => {
 
   const totalCount = dayValues.reduce((s, d) => s + d.count, 0);
 
-  res.json({
-    month,
+  return {
     days: dayValues.map(d => ({ date: d.date, count: d.count })),
     rows: productRows,
     totalMeetings: totalCount
-  });
+  };
+}
+
+app.get('/api/admin/stat/products', authRequired, adminOnly, (req, res) => {
+  const month = String(req.query.month || new Date().toISOString().slice(0, 7));
+  if (!/^\d{4}-\d{2}$/.test(month)) return res.status(400).json({ error: 'invalid_month' });
+  const days = buildDayList(month);
+  const report = buildProductReport(days[0], days[days.length - 1]);
+  res.json({ month, ...report });
 });
 
 app.get('/api/admin/stat/otdel', authRequired, adminOnly, (req, res) => {
