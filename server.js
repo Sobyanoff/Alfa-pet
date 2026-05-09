@@ -838,7 +838,7 @@ function buildProductReport(from, to) {
 
   const baseTotal = monthTotals['ДК/Х5/ИНВ/RE/СНВ/Семейная/Детская'] || 0;
   const kkTotal = (monthTotals['КК1'] || 0) + (monthTotals['КК2'] || 0);
-  const selfTotal = (monthTotals['Сэлфи ДК n2b'] || 0) + (monthTotals['Сэлфи ДК'] || 0) + (monthTotals['Сэлфи КК'] || 0);
+  const selfTotal = (monthTotals['Сэлфи n2b'] || 0) + (monthTotals['Сэлфи ДК (старая)'] || 0) + (monthTotals['Сэлфи КК'] || 0);
 
   function pctValue(p) {
     if (!p.pctOf) return null;
