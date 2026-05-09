@@ -1160,27 +1160,16 @@ function qsAdmin(extra) {
 }
 
 async function loadAdmin() {
+  if (!adminState.month) adminState.month = new Date().toISOString().slice(0,7);
   if (offlineMode) {
-    const byId = new Map(FALLBACK_SOTRUDNIKI.map(x => [x.id, {...x, vsego_vstrech:0, summa_voznagr:0, summa_bs:0}]));
-    history.filter(m => m.AW === 'COMPLETED').forEach(m => {
-      const id = (currentUser && currentUser.id) || 'СОТР-002';
-      const row = byId.get(id);
-      if (row) {
-        row.vsego_vstrech += 1;
-        row.summa_voznagr += m.AV || 0;
-        row.summa_bs += m.AA || 0;
-      }
-    });
-    adminState.rows = Array.from(byId.values());
-    adminState.otdel = [];
+    adminState.products = null;
     return;
   }
-  const [rows, otdel] = await Promise.all([
-    apiFetch('/api/admin/sotrudniki'+qsAdmin()),
-    apiFetch('/api/admin/stat/otdel'+qsAdmin())
-  ]);
-  adminState.rows = rows;
-  adminState.otdel = otdel;
+  try {
+    adminState.products = await apiFetch('/api/admin/stat/products?month='+encodeURIComponent(adminState.month));
+  } catch (_) {
+    adminState.products = null;
+  }
 }
 
 async function openEmployee(row) {
