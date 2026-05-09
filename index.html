@@ -1081,6 +1081,8 @@ function renderLogin() {
   let selectedEmployee = null;
   const fioInput = el('input',{cls:'input', placeholder:'Начните вводить фамилию или имя', autocomplete:'off'});
   const passInput = el('input',{cls:'input', type:'password', placeholder:'Пароль администратора', autocomplete:'current-password'});
+  if (loginFioDraft) fioInput.value = loginFioDraft;
+  if (loginPassDraft) passInput.value = loginPassDraft;
   const suggest = el('div',{cls:'suggest-list'});
   const employees = sotrudniki.map(x => typeof x === 'string' ? { fio:x } : x);
   const renderSuggest = () => {
