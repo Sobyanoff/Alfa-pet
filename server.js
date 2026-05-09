@@ -617,7 +617,7 @@ app.post('/api/login', (req, res) => {
   }
 
   const token = signToken({ id: row.id, fio: row.fio, role: row.role });
-  res.cookie('alfa_token', token, cookieOptions());
+  res.cookie('alfa_token', token, cookieOptions(req));
   audit(row.id, 'login', { role: row.role });
   res.json(row);
 });
