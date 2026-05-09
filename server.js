@@ -836,7 +836,7 @@ function buildProductReport(from, to) {
     monthTotals[p.name] = dayValues.reduce((s, d) => s + (d.values[p.name] || 0), 0);
   });
 
-  const baseTotal = monthTotals['ДК/RE/ЗПК/СИМ'] || 0;
+  const baseTotal = monthTotals['ДК/Х5/ИНВ/RE/СНВ/Семейная/Детская'] || 0;
   const kkTotal = (monthTotals['КК1'] || 0) + (monthTotals['КК2'] || 0);
   const selfTotal = (monthTotals['Сэлфи ДК n2b'] || 0) + (monthTotals['Сэлфи ДК'] || 0) + (monthTotals['Сэлфи КК'] || 0);
 
