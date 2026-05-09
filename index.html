@@ -1216,6 +1216,7 @@ function fmtPct(v) {
 }
 
 function renderAdmin() {
+  if (!adminState.month) adminState.month = currentMonthKey();
   const root = el('div',{});
   const panel = card('Админ-панель — отчёт по продуктам');
   const monthInput = el('input',{cls:'input', type:'month', value:adminState.month});
