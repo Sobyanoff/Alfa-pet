@@ -775,6 +775,7 @@ let appStat = null;
 let sotrudniki = [];
 let loginError = '';
 let adminState = { from:'', to:'', rows:[], otdel:[], selected:null, detail:null, loading:false };
+let offlineMode = false;
 const FALLBACK_SOTRUDNIKI = [
   ['СОТР-001','Бабин Георгий Владимирович','Массовый сегмент','Менеджер прямых продаж','employee'],
   ['СОТР-002','Бязров Сослан Эльбрусович','Массовый сегмент','Старший менеджер','admin'],
@@ -840,11 +841,42 @@ async function apiFetch(url, options) {
 }
 
 async function loadHistoryAndStat() {
-  history = await apiFetch('/api/vstrechi');
-  appStat = await apiFetch('/api/stat');
+  if (!offlineMode) {
+    try {
+      history = await apiFetch('/api/vstrechi');
+      appStat = await apiFetch('/api/stat');
+      return;
+    } catch (e) {
+      offlineMode = true;
+      console.warn('server unavailable, using local storage', e);
+    }
+  }
+  loadLocalHistoryAndStat();
+}
+
+function loadLocalHistoryAndStat() {
+  try { history = JSON.parse(localStorage.getItem('alfa_h') || '[]'); }
+  catch (_) { history = []; }
+  if (!Array.isArray(history)) history = [];
+  const todayKey = today();
+  const todayMtgs = history.filter(m => m.date === todayKey && m.AW === 'COMPLETED');
+  const monthBs = monthlyBSTotal();
+  appStat = {
+    totals: {
+      vsego_vstrech: history.filter(m => m.AW === 'COMPLETED').length,
+      summa_voznagr: history.reduce((s, m) => s + (m.AV || 0), 0),
+      summa_bs: history.reduce((s, m) => s + (m.AA || 0), 0)
+    },
+    today: {
+      vstrech: todayMtgs.length,
+      voznagr: todayMtgs.reduce((s, m) => s + (m.AV || 0), 0)
+    },
+    month: { vstrech: history.length, voznagr: 0, bs: monthBs }
+  };
 }
 
 async function migrateLocalIfNeeded() {
+  if (offlineMode) return;
   let local;
   try { local = JSON.parse(localStorage.getItem('alfa_h') || '[]'); } catch (_) { local = []; }
   if (!Array.isArray(local) || !local.length) return;
@@ -863,7 +895,7 @@ async function migrateLocalIfNeeded() {
 
 async function onLoginSuccess(user) {
   currentUser = user;
-  await migrateLocalIfNeeded();
+  try { await migrateLocalIfNeeded(); } catch (e) { offlineMode = true; }
   await loadHistoryAndStat();
   screen = 'home';
   render();
@@ -872,6 +904,37 @@ async function onLoginSuccess(user) {
 function saveHistory() {
   try { localStorage.setItem('alfa_h', JSON.stringify(history)); }
   catch(e) { alert('Хранилище переполнено, очистите часть истории'); }
+}
+async function saveMeetingData(m) {
+  if (!offlineMode) {
+    try {
+      const saved = await apiFetch('/api/vstrechi', { method:'POST', body:m });
+      return saved.id;
+    } catch (e) {
+      offlineMode = true;
+      console.warn('meeting saved locally', e);
+    }
+  }
+  history.push(m);
+  saveHistory();
+  loadLocalHistoryAndStat();
+  return m.id;
+}
+
+async function deleteMeetingData(id) {
+  if (!offlineMode) {
+    try {
+      await apiFetch('/api/vstrechi/'+encodeURIComponent(id), { method:'DELETE' });
+      await loadHistoryAndStat();
+      return;
+    } catch (e) {
+      offlineMode = true;
+      console.warn('meeting deleted locally', e);
+    }
+  }
+  history = history.filter(h => String(h.id) !== String(id));
+  saveHistory();
+  loadLocalHistoryAndStat();
 }
 function today() { return new Date().toLocaleDateString('ru-RU'); }
 
@@ -929,8 +992,7 @@ async function completeMtg() {
   meeting.AW = 'COMPLETED';
   meeting.completedAt = new Date().toISOString();
   lastCompleted = JSON.parse(JSON.stringify(meeting));
-  const saved = await apiFetch('/api/vstrechi', { method:'POST', body:lastCompleted });
-  lastCompleted.id = saved.id;
+  lastCompleted.id = await saveMeetingData(lastCompleted);
   await loadHistoryAndStat();
   sendToSheets(buildSheetPayload(lastCompleted));
   screen = 'result';
@@ -1053,12 +1115,28 @@ function renderLogin() {
   if (loginError) c.append(el('div',{cls:'empty', css:'margin-bottom:12px'}, loginError));
   c.append(btn('Войти', async ()=>{
     loginError = '';
+    const q = normFio(fioInput.value);
+    const typedMatches = q ? employees.filter(x => normFio(x.fio).includes(q) || normFio(x.otdel).includes(q)) : [];
+    const exact = selectedEmployee || employees.find(x => normFio(x.fio) === q) || (typedMatches.length === 1 ? typedMatches[0] : null);
+    if (!exact) {
+      loginError = 'Выберите себя из списка подсказок';
+      render(true);
+      return;
+    }
     try {
-      const q = normFio(fioInput.value);
-      const exact = selectedEmployee || employees.find(x => normFio(x.fio) === q) || null;
       const user = await apiFetch('/api/login', { method:'POST', body:{ id: exact && exact.id, fio:fioInput.value.trim(), password:passInput.value } });
       await onLoginSuccess(user);
     } catch (e) {
+      if (e.status === 404 || e.status >= 500 || !e.status) {
+        if (exact.role === 'admin' && passInput.value !== 'alfa2026') {
+          loginError = 'Для администратора нужен пароль';
+          render(true);
+          return;
+        }
+        offlineMode = true;
+        await onLoginSuccess(exact);
+        return;
+      }
       loginError = e.data && e.data.error === 'password_required' ? 'Для администратора нужен пароль' :
         e.data && e.data.error === 'invalid_password' ? 'Неверный пароль' :
         e.data && e.data.error === 'ambiguous_employee' ? 'Найдено несколько сотрудников. Выберите себя из списка подсказок.' :
@@ -1080,6 +1158,21 @@ function qsAdmin(extra) {
 }
 
 async function loadAdmin() {
+  if (offlineMode) {
+    const byId = new Map(FALLBACK_SOTRUDNIKI.map(x => [x.id, {...x, vsego_vstrech:0, summa_voznagr:0, summa_bs:0}]));
+    history.filter(m => m.AW === 'COMPLETED').forEach(m => {
+      const id = (currentUser && currentUser.id) || 'СОТР-002';
+      const row = byId.get(id);
+      if (row) {
+        row.vsego_vstrech += 1;
+        row.summa_voznagr += m.AV || 0;
+        row.summa_bs += m.AA || 0;
+      }
+    });
+    adminState.rows = Array.from(byId.values());
+    adminState.otdel = [];
+    return;
+  }
   const [rows, otdel] = await Promise.all([
     apiFetch('/api/admin/sotrudniki'+qsAdmin()),
     apiFetch('/api/admin/stat/otdel'+qsAdmin())
@@ -1158,7 +1251,7 @@ function renderHome() {
   root.append(el('div',{cls:'card userbar'},
     el('div',{cls:'userbar-main'},
       el('div',{cls:'userbar-name'}, currentUser ? currentUser.fio : ''),
-      el('div',{cls:'userbar-role'}, currentUser ? `${currentUser.otdel || ''} · ${currentUser.role === 'admin' ? 'администратор' : 'сотрудник'}` : '')
+      el('div',{cls:'userbar-role'}, currentUser ? `${currentUser.otdel || ''} · ${currentUser.role === 'admin' ? 'администратор' : 'сотрудник'}${offlineMode ? ' · локальный режим' : ''}` : '')
     ),
     currentUser && currentUser.role === 'admin' ? btn('Админ', ()=>{ screen='admin'; loadAdmin().then(render); }, 'btn-outline btn-sm') : null,
     btn('Выйти', logout, 'btn-outline btn-sm')
@@ -1221,7 +1314,7 @@ function renderHome() {
       sub.append(
         el('span',{},`${m.date} · ${parts.join(', ')||'—'}`),
         el('button',{cls:'hi-del',on:async ()=>{
-          if(confirm('Удалить эту встречу?')){await apiFetch('/api/vstrechi/'+encodeURIComponent(m.id), { method:'DELETE' }); await loadHistoryAndStat(); render();}
+          if(confirm('Удалить эту встречу?')){await deleteMeetingData(m.id); render();}
         }},'✕')
       );
       t.append(top, sub);
@@ -1230,8 +1323,7 @@ function renderHome() {
     hCard.append(el('div',{css:'margin-top:14px'},
       btn('Очистить всю историю', async ()=>{
         if(confirm('Удалить всю историю встреч?')){
-          for (const m of history.slice()) await apiFetch('/api/vstrechi/'+encodeURIComponent(m.id), { method:'DELETE' });
-          await loadHistoryAndStat();
+          for (const m of history.slice()) await deleteMeetingData(m.id);
           render();
         }
       },'btn-danger btn-full btn-sm')
