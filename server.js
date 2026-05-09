@@ -623,7 +623,7 @@ app.post('/api/login', (req, res) => {
 });
 
 app.post('/api/logout', (req, res) => {
-  res.clearCookie('alfa_token', { sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
+  res.clearCookie('alfa_token', { sameSite: 'lax', secure: isSecureRequest(req) });
   res.json({ ok: true });
 });
 
