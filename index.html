@@ -1111,7 +1111,8 @@ function renderLogin() {
     });
     if (!matches.length) suggest.append(el('div',{cls:'empty'},'Совпадений нет. Попробуйте ввести только фамилию.'));
   };
-  fioInput.addEventListener('input', renderSuggest);
+  fioInput.addEventListener('input', () => { loginFioDraft = fioInput.value; renderSuggest(); });
+  passInput.addEventListener('input', () => { loginPassDraft = passInput.value; });
   setTimeout(renderSuggest, 0);
   c.append(
     el('div',{cls:'form-row'}, el('label',{cls:'label'},'ФИО'), fioInput, suggest),
