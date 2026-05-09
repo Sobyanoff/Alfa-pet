@@ -40,11 +40,18 @@ function signToken(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_TTL });
 }
 
-function cookieOptions() {
+function isSecureRequest(req) {
+  if (!req) return false;
+  if (req.secure) return true;
+  const proto = req.headers && req.headers['x-forwarded-proto'];
+  return typeof proto === 'string' && proto.split(',')[0].trim() === 'https';
+}
+
+function cookieOptions(req) {
   return {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: isSecureRequest(req),
     maxAge: 30 * 24 * 60 * 60 * 1000
   };
 }
