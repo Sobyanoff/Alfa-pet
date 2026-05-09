@@ -1186,16 +1186,22 @@ function qsAdmin(extra) {
   return s ? `?${s}` : '';
 }
 
+function currentMonthKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
 async function loadAdmin() {
-  if (!adminState.month) adminState.month = new Date().toISOString().slice(0,7);
-  if (offlineMode) {
-    adminState.products = null;
-    return;
-  }
+  if (!adminState.month) adminState.month = currentMonthKey();
+  adminState.loadError = '';
   try {
     adminState.products = await apiFetch('/api/admin/stat/products?month='+encodeURIComponent(adminState.month));
-  } catch (_) {
+    offlineMode = false;
+  } catch (e) {
     adminState.products = null;
+    if (e && e.status === 401) adminState.loadError = 'Сессия истекла — войдите заново';
+    else if (e && e.status === 403) adminState.loadError = 'Доступ только для администратора';
+    else adminState.loadError = 'Не удалось загрузить отчёт';
   }
 }
 
