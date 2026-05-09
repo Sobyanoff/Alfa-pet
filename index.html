@@ -898,6 +898,9 @@ async function migrateLocalIfNeeded() {
 
 async function onLoginSuccess(user) {
   currentUser = user;
+  loginFioDraft = '';
+  loginPassDraft = '';
+  loginError = '';
   try { await migrateLocalIfNeeded(); } catch (e) { offlineMode = true; }
   await loadHistoryAndStat();
   screen = 'home';
