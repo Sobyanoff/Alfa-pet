@@ -534,8 +534,35 @@
     .userbar-name { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .userbar-role { font-size: 12px; color: var(--muted); margin-top: 3px; }
     .admin-wide { max-width: 980px; }
-    .admin-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-    .admin-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .admin-filters { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 10px; }
+    .admin-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    @media (max-width: 640px) { .admin-actions { grid-template-columns: 1fr; } }
+    .admin-day-stat-wrap { margin-top: 4px; }
+    .admin-day-stat-title { font-size: 13px; color: var(--slate-700); font-weight: 700; margin-bottom: 8px; }
+    .admin-day-stat { display: flex; flex-wrap: wrap; gap: 4px; }
+    .admin-day-cell { min-width: 48px; padding: 6px 4px; border-radius: 8px; background: var(--slate-100); text-align: center; font-size: 11px; }
+    .admin-day-cell.has { background: var(--red-tint); }
+    .admin-day-num { color: var(--muted); font-size: 10px; }
+    .admin-day-count { font-weight: 700; color: var(--ink); font-size: 13px; }
+    .admin-products-scroll { overflow-x: auto; margin-top: 12px; border: 1px solid var(--border); border-radius: 12px; max-height: 75vh; overflow-y: auto; }
+    .admin-products { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 12px; }
+    .admin-products thead th { position: sticky; top: 0; z-index: 5; background: var(--ink); color: #fff; padding: 8px 6px; font-weight: 600; font-size: 11px; white-space: nowrap; border-right: 1px solid rgba(255,255,255,.08); }
+    .admin-products thead th.sticky-col { left: 0; z-index: 6; min-width: 200px; text-align: left; }
+    .admin-products thead th.col-month { background: var(--red); }
+    .admin-products thead th.col-pct { background: var(--red-deep); }
+    .admin-products tbody td { padding: 6px 8px; border-bottom: 1px solid var(--slate-100); border-right: 1px solid var(--slate-100); white-space: nowrap; }
+    .admin-products tbody td.sticky-col { position: sticky; left: 0; background: #fff; font-weight: 600; min-width: 200px; max-width: 240px; white-space: normal; z-index: 2; box-shadow: 1px 0 0 var(--border); }
+    .admin-products tbody tr.row-bold td { background: var(--red-tint); font-weight: 800; }
+    .admin-products tbody tr.row-bold td.sticky-col { background: var(--red-tint); }
+    .admin-products tbody tr.row-group td { background: #FFF7E6; }
+    .admin-products tbody tr.row-group td.sticky-col { background: #FFF7E6; }
+    .admin-products tbody tr:hover td { background: var(--snow); }
+    .admin-products tbody tr:hover td.sticky-col { background: var(--snow); }
+    .admin-products .cell-num { text-align: right; font-variant-numeric: tabular-nums; }
+    .admin-products .cell-num.zero { color: var(--slate-300); }
+    .admin-products .cell-num.has { color: var(--ink); font-weight: 600; }
+    .admin-products .cell-month { background: #FFF1F0; font-weight: 700; }
+    .admin-products .cell-pct { text-align: right; color: var(--red); font-weight: 700; background: #FFF7F7; }
     .admin-chart { display: grid; gap: 10px; }
     .bar-row { display: grid; grid-template-columns: 145px 1fr 72px; gap: 8px; align-items: center; font-size: 12px; }
     .bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--slate-700); }
