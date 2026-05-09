@@ -788,8 +788,7 @@ const PRODUCT_ROWS = [
 ];
 
 function productSum(m) {
-  return ['F','G','H','I','J','K','L','O','P','T','X','Z','AA','AB','AC','AD','AE','AI','AR','AJ','AK','AL','AM','AN','AQ','AS','AT','AU']
-    .reduce((sum, key) => sum + num(m[key]), 0);
+  return ['F','G','H','I','J','K','L'].reduce((sum, key) => sum + num(m[key]), 0);
 }
 
 function getMeetingsInRange(from, to) {
