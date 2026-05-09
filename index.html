@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
@@ -515,6 +515,42 @@
     }
 
     /* ── Animations ── */
+    .form-row { display: grid; gap: 8px; margin-bottom: 12px; }
+    .label { font-size: 12px; font-weight: 700; color: var(--slate-500); text-transform: uppercase; letter-spacing: .06em; }
+    .input {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: var(--r-btn-sm);
+      padding: 13px 12px;
+      font: inherit;
+      background: #fff;
+      color: var(--ink);
+      outline: none;
+    }
+    .input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(239,49,36,.10); }
+    .userbar { display: flex; gap: 8px; align-items: stretch; margin-bottom: 10px; }
+    .userbar-main { flex: 1; min-width: 0; }
+    .userbar-name { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .userbar-role { font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .admin-wide { max-width: 980px; }
+    .admin-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .admin-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .admin-chart { display: grid; gap: 10px; }
+    .bar-row { display: grid; grid-template-columns: 145px 1fr 72px; gap: 8px; align-items: center; font-size: 12px; }
+    .bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--slate-700); }
+    .bar-track { height: 10px; border-radius: 999px; background: var(--slate-100); overflow: hidden; }
+    .bar-fill { height: 100%; background: var(--red); border-radius: inherit; }
+    .table-scroll { overflow-x: auto; }
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 760px; }
+    .admin-table th, .admin-table td { padding: 10px 8px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    .admin-table th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+    .admin-table tr { cursor: pointer; }
+    .admin-table tr:hover td { background: var(--snow); }
+    .detail-list { display: grid; gap: 8px; margin-top: 12px; }
+    .detail-item { border: 1px solid var(--border); border-radius: 12px; padding: 10px; background: #fff; }
+    .detail-top { display: flex; justify-content: space-between; gap: 10px; font-weight: 700; }
+    .detail-sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
     .fade { animation: fi .22s cubic-bezier(.2,.6,.3,1); }
     @keyframes fi { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
@@ -541,7 +577,7 @@
 // ═══════════════════════════════════════════════════════
 // Вставь сюда URL развёрнутого Google Apps Script Web App
 // (см. инструкцию в чате). Если оставить пустым — отправка отключена.
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzPOCMPbm_rv8sNHn1shLSRBOhCEoQtpPxsCVkyHYdUdfxjf_eoJdU0YH8GpnpDHaJ8sg/exec';
+const SHEETS_URL = '';
 
 function getEmployee() {
   let n = (localStorage.getItem('alfa_user') || '').trim();
@@ -568,7 +604,7 @@ function productsLine(m) {
 
 function buildSheetPayload(m) {
   return {
-    employee: localStorage.getItem('alfa_user') || '',
+    employee: (currentUser && currentUser.fio) || '',
     date: m.date || '',
     ts: m.id || Date.now(),
     client: m.clientName || '',
@@ -712,11 +748,63 @@ function calcEarnings(m, forceBSRate) {
 //  APP STATE
 // ═══════════════════════════════════════════════════════
 let meeting = null;
-let screen  = 'home';
-let history;
+let screen  = 'login';
+let history = [];
+let currentUser = null;
+let appStat = null;
+let sotrudniki = [];
+let loginError = '';
+let adminState = { from:'', to:'', rows:[], otdel:[], selected:null, detail:null, loading:false };
 try { history = JSON.parse(localStorage.getItem('alfa_h') || '[]'); }
 catch(e) { console.warn('alfa_h corrupt, resetting:', e); history = []; }
 if (!Array.isArray(history)) history = [];
+
+async function apiFetch(url, options) {
+  const opts = options || {};
+  const res = await fetch(url, {
+    method: opts.method || 'GET',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    body: opts.body === undefined ? undefined : JSON.stringify(opts.body)
+  });
+  if (!res.ok) {
+    let err;
+    try { err = await res.json(); } catch (_) { err = { error: 'request_failed' }; }
+    throw Object.assign(new Error(err.error || 'request_failed'), { status: res.status, data: err });
+  }
+  const ct = res.headers.get('content-type') || '';
+  return ct.includes('application/json') ? res.json() : res;
+}
+
+async function loadHistoryAndStat() {
+  history = await apiFetch('/api/vstrechi');
+  appStat = await apiFetch('/api/stat');
+}
+
+async function migrateLocalIfNeeded() {
+  let local;
+  try { local = JSON.parse(localStorage.getItem('alfa_h') || '[]'); } catch (_) { local = []; }
+  if (!Array.isArray(local) || !local.length) return;
+  const server = await apiFetch('/api/vstrechi');
+  const serverIds = new Set(server.map(m => String(m.id)));
+  const toUpload = local.filter(m => !serverIds.has(String(m.id)));
+  if (!toUpload.length) { localStorage.removeItem('alfa_h'); return; }
+  if (!confirm(`Найдено ${toUpload.length} встреч в этом браузере. Перенести на сервер?`)) return;
+  for (const m of toUpload) {
+    try { await apiFetch('/api/vstrechi', { method:'POST', body:m }); }
+    catch (e) { console.warn('migration skipped', m.id, e); }
+  }
+  localStorage.setItem('alfa_h_migrated_at', new Date().toISOString());
+  localStorage.removeItem('alfa_h');
+}
+
+async function onLoginSuccess(user) {
+  currentUser = user;
+  await migrateLocalIfNeeded();
+  await loadHistoryAndStat();
+  screen = 'home';
+  render();
+}
 
 function saveHistory() {
   try { localStorage.setItem('alfa_h', JSON.stringify(history)); }
@@ -736,6 +824,17 @@ function goBack() {
 }
 
 function goHome()  { navStack = []; meeting = null; screen = 'home'; render(); }
+
+async function logout() {
+  await apiFetch('/api/logout', { method:'POST' }).catch(()=>null);
+  currentUser = null;
+  history = [];
+  appStat = null;
+  navStack = [];
+  meeting = null;
+  screen = 'login';
+  render();
+}
 
 function getMode() { return localStorage.getItem('alfa_mode') === 'LIST' ? 'LIST' : 'STEP'; }
 function setMode(m) { localStorage.setItem('alfa_mode', m); }
@@ -757,18 +856,19 @@ function switchMode(m) {
   render();
 }
 
-function completeMtg() {
+async function completeMtg() {
   if (!meeting) return;
   const hasAny = meeting.primaryType || meeting.E > 0 || meeting.O > 0 || meeting.P > 0 || meeting.AA > 0;
   if (!hasAny && !confirm('Сохранить пустую встречу?')) return;
-  if (SHEETS_URL) getEmployee();
   meeting.date = today();
   meeting.E  = meeting.F+meeting.G+meeting.H+meeting.I+meeting.J+meeting.K+meeting.L;
   meeting.AV = calcEarnings(meeting);
   meeting.AW = 'COMPLETED';
+  meeting.completedAt = new Date().toISOString();
   lastCompleted = JSON.parse(JSON.stringify(meeting));
-  history.push(lastCompleted);
-  saveHistory();
+  const saved = await apiFetch('/api/vstrechi', { method:'POST', body:lastCompleted });
+  lastCompleted.id = saved.id;
+  await loadHistoryAndStat();
   sendToSheets(buildSheetPayload(lastCompleted));
   screen = 'result';
   render();
@@ -841,6 +941,110 @@ function rrow(lbl,val) {
 // ═══════════════════════════════════════════════════════
 
 /* ─── HOME ─── */
+function fmtMoney(v) { return `${Math.round(Number(v)||0).toLocaleString('ru-RU')} ₽`; }
+
+function renderLogin() {
+  const root = el('div',{});
+  const c = card('Вход в Alfa Tracker');
+  const fioInput = el('input',{cls:'input', list:'fio-list', placeholder:'Фамилия Имя Отчество', autocomplete:'name'});
+  const passInput = el('input',{cls:'input', type:'password', placeholder:'Пароль администратора', autocomplete:'current-password'});
+  const list = el('datalist',{id:'fio-list'});
+  sotrudniki.forEach(x => list.append(el('option',{value: typeof x === 'string' ? x : x.fio})));
+  c.append(
+    el('div',{cls:'form-row'}, el('label',{cls:'label'},'ФИО'), fioInput, list),
+    el('div',{cls:'form-row'}, el('label',{cls:'label'},'Пароль для администратора'), passInput)
+  );
+  if (loginError) c.append(el('div',{cls:'empty', css:'margin-bottom:12px'}, loginError));
+  c.append(btn('Войти', async ()=>{
+    loginError = '';
+    try {
+      const user = await apiFetch('/api/login', { method:'POST', body:{ fio:fioInput.value.trim(), password:passInput.value } });
+      await onLoginSuccess(user);
+    } catch (e) {
+      loginError = e.data && e.data.error === 'password_required' ? 'Для администратора нужен пароль' :
+        e.data && e.data.error === 'invalid_password' ? 'Неверный пароль' :
+        e.data && e.data.error === 'unknown_employee' ? 'Сотрудник не найден' : 'Не удалось войти';
+      render(true);
+    }
+  }, 'btn-red btn-full'));
+  root.append(c);
+  return root;
+}
+
+function qsAdmin(extra) {
+  const p = new URLSearchParams();
+  if (adminState.from) p.set('from', adminState.from);
+  if (adminState.to) p.set('to', adminState.to);
+  Object.entries(extra || {}).forEach(([k,v]) => { if (v) p.set(k,v); });
+  const s = p.toString();
+  return s ? `?${s}` : '';
+}
+
+async function loadAdmin() {
+  const [rows, otdel] = await Promise.all([
+    apiFetch('/api/admin/sotrudniki'+qsAdmin()),
+    apiFetch('/api/admin/stat/otdel'+qsAdmin())
+  ]);
+  adminState.rows = rows;
+  adminState.otdel = otdel;
+}
+
+async function openEmployee(row) {
+  adminState.selected = row;
+  adminState.detail = await apiFetch('/api/admin/sotrudniki/'+encodeURIComponent(row.id)+qsAdmin());
+  render();
+}
+
+function renderAdmin() {
+  const root = el('div',{});
+  const panel = card('Админ-панель');
+  const from = el('input',{cls:'input', type:'date', value:adminState.from});
+  const to = el('input',{cls:'input', type:'date', value:adminState.to});
+  panel.append(
+    el('div',{cls:'admin-filters'},
+      el('div',{cls:'form-row'}, el('label',{cls:'label'},'С даты'), from),
+      el('div',{cls:'form-row'}, el('label',{cls:'label'},'По дату'), to)
+    ),
+    el('div',{cls:'admin-actions'},
+      btn('Применить', async ()=>{ adminState.from=from.value; adminState.to=to.value; adminState.detail=null; await loadAdmin(); render(); }, 'btn-red btn-full'),
+      btn('Экспорт XLSX', ()=>{ window.location = '/api/admin/export/xlsx'+qsAdmin(); }, 'btn-outline btn-full')
+    )
+  );
+  root.append(panel);
+  const chart = card('Сводка по отделам');
+  const max = Math.max(1, ...adminState.otdel.map(r => r.voznagr || 0));
+  const bars = el('div',{cls:'admin-chart'});
+  adminState.otdel.forEach(r => bars.append(el('div',{cls:'bar-row'},
+    el('div',{cls:'bar-label'}, r.otdel),
+    el('div',{cls:'bar-track'}, el('div',{cls:'bar-fill', css:`width:${Math.max(3, (r.voznagr || 0) / max * 100)}%`})),
+    el('div',{}, fmtMoney(r.voznagr))
+  )));
+  chart.append(bars);
+  root.append(chart);
+  const tableCard = card('Сотрудники');
+  const table = el('table',{cls:'admin-table'});
+  table.append(el('thead',{}, el('tr',{}, el('th',{},'ФИО'), el('th',{},'Отдел'), el('th',{},'Встреч'), el('th',{},'Σ вознагр.'), el('th',{},'Σ БС'))));
+  const tb = el('tbody',{});
+  adminState.rows.forEach(r => tb.append(el('tr',{on:()=>openEmployee(r)},
+    el('td',{},r.fio), el('td',{},r.otdel), el('td',{},String(r.vsego_vstrech || 0)), el('td',{},fmtMoney(r.summa_voznagr)), el('td',{},String(r.summa_bs || 0))
+  )));
+  table.append(tb);
+  tableCard.append(el('div',{cls:'table-scroll'}, table));
+  root.append(tableCard);
+  if (adminState.detail) {
+    const d = card(`Встречи: ${adminState.detail.sotrudnik.fio}`);
+    const list = el('div',{cls:'detail-list'});
+    if (!adminState.detail.vstrechi.length) list.append(el('div',{cls:'empty'},'За выбранный период встреч нет'));
+    adminState.detail.vstrechi.forEach(m => list.append(el('div',{cls:'detail-item'},
+      el('div',{cls:'detail-top'}, el('span',{},m.clientName || m.klient || 'Клиент'), el('span',{},fmtMoney(m.AV || m.av))),
+      el('div',{cls:'detail-sub'},`${m.date || m.data_vstrechi || ''} · ${m.primaryType || m.primary_type || '—'}`)
+    )));
+    d.append(list);
+    root.append(d);
+  }
+  return root;
+}
+
 function meetingsWord(n) {
   const m = n % 10, m100 = n % 100;
   if (m100 >= 11 && m100 <= 14) return 'встреч';
@@ -852,14 +1056,25 @@ function meetingsWord(n) {
 function renderHome() {
   const root = el('div',{});
 
+  root.append(el('div',{cls:'card userbar'},
+    el('div',{cls:'userbar-main'},
+      el('div',{cls:'userbar-name'}, currentUser ? currentUser.fio : ''),
+      el('div',{cls:'userbar-role'}, currentUser ? `${currentUser.otdel || ''} · ${currentUser.role === 'admin' ? 'администратор' : 'сотрудник'}` : '')
+    ),
+    currentUser && currentUser.role === 'admin' ? btn('Админ', ()=>{ screen='admin'; loadAdmin().then(render); }, 'btn-outline btn-sm') : null,
+    btn('Выйти', logout, 'btn-outline btn-sm')
+  ));
+
   const todayMtgs = history.filter(m=>m.date===today()&&m.AW==='COMPLETED');
   const mBS = monthlyBSTotal();
   const mRate = bsRate(mBS);
-  const sumToday = todayMtgs.reduce((s,m)=>s+calcEarnings(m,mRate),0);
+  const statToday = appStat && appStat.today ? appStat.today : null;
+  const sumToday = statToday ? (statToday.voznagr || 0) : todayMtgs.reduce((s,m)=>s+calcEarnings(m,mRate),0);
+  const todayCount = statToday ? (statToday.vstrech || 0) : todayMtgs.length;
 
   // ── Hero (сводка дня) ──
   const hero = el('div',{cls:'hero fade'});
-  if (todayMtgs.length === 0) {
+  if (todayCount === 0) {
     hero.append(
       el('div',{cls:'hero-label'},'Готов к работе'),
       el('div',{cls:'hero-amount zero'},'0',el('span',{cls:'ru'},' ₽')),
@@ -872,7 +1087,7 @@ function renderHome() {
       el('div',{cls:'hero-label'},'Заработано сегодня'),
       el('div',{cls:'hero-amount'},sumToday.toLocaleString('ru-RU'),el('span',{cls:'ru'},' ₽')),
       el('div',{cls:'hero-meta'},
-        el('span',{},el('b',{},String(todayMtgs.length)),' '+meetingsWord(todayMtgs.length)),
+        el('span',{},el('b',{},String(todayCount)),' '+meetingsWord(todayCount)),
         el('span',{},'БС тир ',el('b',{},mRate+'₽'))
       )
     );
@@ -906,16 +1121,20 @@ function renderHome() {
       const sub=el('div',{cls:'hi-sub'});
       sub.append(
         el('span',{},`${m.date} · ${parts.join(', ')||'—'}`),
-        el('button',{cls:'hi-del',on:()=>{
-          if(confirm('Удалить эту встречу?')){history=history.filter(h=>h.id!==m.id);saveHistory();render();}
+        el('button',{cls:'hi-del',on:async ()=>{
+          if(confirm('Удалить эту встречу?')){await apiFetch('/api/vstrechi/'+encodeURIComponent(m.id), { method:'DELETE' }); await loadHistoryAndStat(); render();}
         }},'✕')
       );
       t.append(top, sub);
       hCard.append(t);
     });
     hCard.append(el('div',{css:'margin-top:14px'},
-      btn('Очистить всю историю', ()=>{
-        if(confirm('Удалить всю историю встреч?')){history=[];saveHistory();render();}
+      btn('Очистить всю историю', async ()=>{
+        if(confirm('Удалить всю историю встреч?')){
+          for (const m of history.slice()) await apiFetch('/api/vstrechi/'+encodeURIComponent(m.id), { method:'DELETE' });
+          await loadHistoryAndStat();
+          render();
+        }
       },'btn-danger btn-full btn-sm')
     ));
   }
@@ -1756,11 +1975,14 @@ function render(keepScroll) {
   root.innerHTML='';
   root.className = screen !== lastScreen ? 'fade' : '';
   lastScreen = screen;
-  document.getElementById('hback').style.visibility = screen === 'home' ? 'hidden' : '';
+  document.querySelector('.wrap').className = screen === 'admin' ? 'wrap admin-wide' : 'wrap';
+  document.getElementById('hback').style.visibility = (screen === 'home' || screen === 'login') ? 'hidden' : '';
   let node;
-  if      (screen==='home')    node=renderHome();
+  if      (screen==='login')   node=renderLogin();
+  else if (screen==='home')    node=currentUser ? renderHome() : renderLogin();
   else if (screen==='meeting') node=renderMeeting();
   else if (screen==='result')  node=renderResult();
+  else if (screen==='admin')   node=currentUser && currentUser.role === 'admin' ? renderAdmin() : renderHome();
   else                         node=renderHome();
   root.append(node);
   if (!keepScroll) window.scrollTo({top:0,behavior:'smooth'});
@@ -1772,8 +1994,21 @@ function render(keepScroll) {
 document.getElementById('hdate').textContent =
   new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
 
-render();
-flushOutbox();
+async function bootstrap() {
+  try { sotrudniki = await apiFetch('/api/sotrudniki'); } catch (_) { sotrudniki = []; }
+  try {
+    currentUser = await apiFetch('/api/me');
+    await loadHistoryAndStat();
+    screen = 'home';
+  } catch (_) {
+    screen = 'login';
+  }
+  render();
+  flushOutbox();
+}
+
+bootstrap();
 </script>
 </body>
 </html>
+
