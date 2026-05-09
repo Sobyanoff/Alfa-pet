@@ -80,6 +80,24 @@ function currentUserById(id) {
   `).get(id);
 }
 
+function normalizeFio(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function publicEmployee(row) {
+  return {
+    id: row.id_sotrudnika || row.id,
+    fio: row.fio,
+    otdel: row.otdel,
+    dolzhnost: row.dolzhnost,
+    role: row.role || 'employee'
+  };
+}
+
 function parseRuDate(s) {
   const m = String(s || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
   if (!m) return null;
@@ -192,26 +210,41 @@ app.get('/api/health', (req, res) => {
 
 app.get('/api/sotrudniki', (req, res) => {
   const rows = db.prepare(`
-    SELECT s.fio, COALESCE(u.role, 'employee') AS role
+    SELECT s.id_sotrudnika, s.fio, s.otdel, s.dolzhnost, COALESCE(u.role, 'employee') AS role
     FROM sotrudniki s
     LEFT JOIN users u ON u.id_sotrudnika = s.id_sotrudnika
     WHERE COALESCE(s.active, 1) = 1
     ORDER BY s.fio
   `).all();
-  res.json(rows);
+  res.json(rows.map(publicEmployee));
 });
 
 app.post('/api/login', (req, res) => {
+  const id = String((req.body && req.body.id) || '').trim();
   const fio = String((req.body && req.body.fio) || '').trim();
   const password = String((req.body && req.body.password) || '');
-  if (!fio) return res.status(400).json({ error: 'fio_required' });
+  if (!fio && !id) return res.status(400).json({ error: 'fio_required' });
 
-  const row = db.prepare(`
+  let row = null;
+  const selectSql = `
     SELECT s.id_sotrudnika AS id, s.fio, s.otdel, s.dolzhnost, COALESCE(u.role, 'employee') AS role
     FROM sotrudniki s
     LEFT JOIN users u ON u.id_sotrudnika = s.id_sotrudnika
-    WHERE s.fio = ? AND COALESCE(s.active, 1) = 1
-  `).get(fio);
+    WHERE COALESCE(s.active, 1) = 1
+  `;
+  if (id) row = db.prepare(`${selectSql} AND s.id_sotrudnika = ?`).get(id);
+  if (!row && fio) row = db.prepare(`${selectSql} AND s.fio = ?`).get(fio);
+  if (!row && fio) {
+    const needle = normalizeFio(fio);
+    const all = db.prepare(`${selectSql} ORDER BY s.fio`).all();
+    const matches = all.filter(r => normalizeFio(r.fio) === needle);
+    if (matches.length === 1) row = matches[0];
+    else if (!matches.length) {
+      const fuzzy = all.filter(r => normalizeFio(r.fio).includes(needle) || needle.includes(normalizeFio(r.fio))).slice(0, 6);
+      if (fuzzy.length === 1) row = fuzzy[0];
+      else if (fuzzy.length > 1) return res.status(401).json({ error: 'ambiguous_employee', suggestions: fuzzy.map(publicEmployee) });
+    }
+  }
   if (!row) return res.status(401).json({ error: 'unknown_employee' });
   if (row.role === 'admin') {
     if (!password) return res.status(401).json({ error: 'password_required' });
