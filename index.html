@@ -1119,7 +1119,7 @@ function renderLogin() {
     el('div',{cls:'form-row'}, el('label',{cls:'label'},'Пароль для администратора'), passInput)
   );
   if (loginError) c.append(el('div',{cls:'empty', css:'margin-bottom:12px'}, loginError));
-  c.append(btn('Войти', async ()=>{
+  const submitLogin = async ()=>{
     loginError = '';
     const q = normFio(fioInput.value);
     const typedMatches = q ? employees.filter(x => normFio(x.fio).includes(q) || normFio(x.otdel).includes(q)) : [];
