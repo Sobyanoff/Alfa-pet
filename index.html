@@ -776,8 +776,7 @@ let appStat = null;
 let sotrudniki = [];
 let loginError = '';
 let loginFioDraft = '';
-let loginPassDraft = '';
-let adminState = { from:'', to:'', rows:[], otdel:[], selected:null, detail:null, loading:false };
+let adminState = { from:'', to:'', rows:[], otdel:[], selected:null, detail:null, loading:false, month:'', products:null };
 let offlineMode = false;
 const FALLBACK_SOTRUDNIKI = [
   ['СОТР-001','Бабин Георгий Владимирович','Массовый сегмент','Менеджер прямых продаж','employee'],
@@ -899,7 +898,6 @@ async function migrateLocalIfNeeded() {
 async function onLoginSuccess(user) {
   currentUser = user;
   loginFioDraft = '';
-  loginPassDraft = '';
   loginError = '';
   try { await migrateLocalIfNeeded(); } catch (e) { offlineMode = true; }
   await loadHistoryAndStat();
@@ -1083,9 +1081,7 @@ function renderLogin() {
   const c = card('Вход в Alfa Tracker');
   let selectedEmployee = null;
   const fioInput = el('input',{cls:'input', placeholder:'Начните вводить фамилию или имя', autocomplete:'off'});
-  const passInput = el('input',{cls:'input', type:'password', placeholder:'Пароль администратора', autocomplete:'current-password'});
   if (loginFioDraft) fioInput.value = loginFioDraft;
-  if (loginPassDraft) passInput.value = loginPassDraft;
   const suggest = el('div',{cls:'suggest-list'});
   const employees = sotrudniki.map(x => typeof x === 'string' ? { fio:x } : x);
   const renderSuggest = () => {
@@ -1107,7 +1103,6 @@ function renderLogin() {
         selectedEmployee = emp;
         fioInput.value = emp.fio;
         renderSuggest();
-        if (emp.role === 'admin') passInput.focus();
       };
       suggest.append(item);
       if (!q && idx === 7) item.style.marginBottom = '2px';
@@ -1115,11 +1110,9 @@ function renderLogin() {
     if (!matches.length) suggest.append(el('div',{cls:'empty'},'Совпадений нет. Попробуйте ввести только фамилию.'));
   };
   fioInput.addEventListener('input', () => { loginFioDraft = fioInput.value; renderSuggest(); });
-  passInput.addEventListener('input', () => { loginPassDraft = passInput.value; });
   setTimeout(renderSuggest, 0);
   c.append(
-    el('div',{cls:'form-row'}, el('label',{cls:'label'},'ФИО'), fioInput, suggest),
-    el('div',{cls:'form-row'}, el('label',{cls:'label'},'Пароль для администратора'), passInput)
+    el('div',{cls:'form-row'}, el('label',{cls:'label'},'ФИО'), fioInput, suggest)
   );
   if (loginError) c.append(el('div',{cls:'empty', css:'margin-bottom:12px'}, loginError));
   const submitLogin = async ()=>{
@@ -1127,35 +1120,31 @@ function renderLogin() {
     const q = normFio(fioInput.value);
     const typedMatches = q ? employees.filter(x => normFio(x.fio).includes(q) || normFio(x.otdel).includes(q)) : [];
     const exact = selectedEmployee || employees.find(x => normFio(x.fio) === q) || (typedMatches.length === 1 ? typedMatches[0] : null);
-    if (!exact) {
-      loginError = 'Выберите себя из списка подсказок';
+    if (!q) {
+      loginError = 'Введите ФИО';
       render(true);
       return;
     }
     try {
-      const user = await apiFetch('/api/login', { method:'POST', body:{ id: exact && exact.id, fio:fioInput.value.trim(), password:passInput.value } });
+      const user = await apiFetch('/api/login', { method:'POST', body:{ id: exact && exact.id, fio:fioInput.value.trim() } });
       await onLoginSuccess(user);
     } catch (e) {
       if (e.status === 404 || e.status >= 500 || !e.status) {
-        if (exact.role === 'admin' && passInput.value !== 'alfa2026') {
-          loginError = 'Для администратора нужен пароль';
-          render(true);
-          return;
-        }
         offlineMode = true;
-        await onLoginSuccess(exact);
+        if (exact) await onLoginSuccess(exact);
+        else {
+          loginError = 'Сервер недоступен, выберите сотрудника из списка';
+          render(true);
+        }
         return;
       }
-      loginError = e.data && e.data.error === 'password_required' ? 'Для администратора нужен пароль' :
-        e.data && e.data.error === 'invalid_password' ? 'Неверный пароль' :
-        e.data && e.data.error === 'ambiguous_employee' ? 'Найдено несколько сотрудников. Выберите себя из списка подсказок.' :
+      loginError = e.data && e.data.error === 'ambiguous_employee' ? 'Найдено несколько сотрудников. Выберите себя из списка подсказок.' :
         e.data && e.data.error === 'unknown_employee' ? 'Сотрудник не найден' : 'Не удалось войти';
       render(true);
     }
   };
   const onEnter = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); submitLogin(); } };
   fioInput.addEventListener('keydown', onEnter);
-  passInput.addEventListener('keydown', onEnter);
   c.append(btn('Войти', submitLogin, 'btn-red btn-full'));
   root.append(c);
   return root;
@@ -1212,7 +1201,8 @@ function renderAdmin() {
     ),
     el('div',{cls:'admin-actions'},
       btn('Применить', async ()=>{ adminState.from=from.value; adminState.to=to.value; adminState.detail=null; await loadAdmin(); render(); }, 'btn-red btn-full'),
-      btn('Экспорт XLSX', ()=>{ window.location = '/api/admin/export/xlsx'+qsAdmin(); }, 'btn-outline btn-full')
+      btn('Экспорт XLSX', ()=>{ window.location = '/api/admin/export/xlsx'+qsAdmin(); }, 'btn-outline btn-full'),
+      btn('Живой Excel', ()=>{ window.location = '/api/admin/live-xlsx'; }, 'btn-outline btn-full')
     )
   );
   root.append(panel);
