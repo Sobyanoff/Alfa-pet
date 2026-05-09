@@ -1149,7 +1149,11 @@ function renderLogin() {
         e.data && e.data.error === 'unknown_employee' ? 'Сотрудник не найден' : 'Не удалось войти';
       render(true);
     }
-  }, 'btn-red btn-full'));
+  };
+  const onEnter = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); submitLogin(); } };
+  fioInput.addEventListener('keydown', onEnter);
+  passInput.addEventListener('keydown', onEnter);
+  c.append(btn('Войти', submitLogin, 'btn-red btn-full'));
   root.append(c);
   return root;
 }
