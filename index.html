@@ -1172,60 +1172,78 @@ async function loadAdmin() {
   }
 }
 
-async function openEmployee(row) {
-  adminState.selected = row;
-  adminState.detail = await apiFetch('/api/admin/sotrudniki/'+encodeURIComponent(row.id)+qsAdmin());
-  render();
+function fmtDayHeader(dateKey) {
+  const [, m, d] = dateKey.split('-');
+  return `${d}.${m}`;
+}
+
+function fmtPct(v) {
+  if (v == null || !isFinite(v)) return '';
+  return (v * 100).toFixed(2).replace('.', ',') + '%';
 }
 
 function renderAdmin() {
   const root = el('div',{});
-  const panel = card('Админ-панель');
-  const from = el('input',{cls:'input', type:'date', value:adminState.from});
-  const to = el('input',{cls:'input', type:'date', value:adminState.to});
+  const panel = card('Админ-панель — отчёт по продуктам');
+  const monthInput = el('input',{cls:'input', type:'month', value:adminState.month});
   panel.append(
     el('div',{cls:'admin-filters'},
-      el('div',{cls:'form-row'}, el('label',{cls:'label'},'С даты'), from),
-      el('div',{cls:'form-row'}, el('label',{cls:'label'},'По дату'), to)
+      el('div',{cls:'form-row'}, el('label',{cls:'label'},'Месяц'), monthInput)
     ),
     el('div',{cls:'admin-actions'},
-      btn('Применить', async ()=>{ adminState.from=from.value; adminState.to=to.value; adminState.detail=null; await loadAdmin(); render(); }, 'btn-red btn-full'),
-      btn('Экспорт XLSX', ()=>{ window.location = '/api/admin/export/xlsx'+qsAdmin(); }, 'btn-outline btn-full'),
+      btn('Применить', async ()=>{ adminState.month=monthInput.value || adminState.month; await loadAdmin(); render(); }, 'btn-red btn-full'),
+      btn('Экспорт XLSX', ()=>{ window.location = '/api/admin/export/xlsx?from='+adminState.month+'-01&to='+adminState.month+'-31'; }, 'btn-outline btn-full'),
       btn('Живой Excel', ()=>{ window.location = '/api/admin/live-xlsx'; }, 'btn-outline btn-full')
     )
   );
   root.append(panel);
-  const chart = card('Сводка по отделам');
-  const max = Math.max(1, ...adminState.otdel.map(r => r.voznagr || 0));
-  const bars = el('div',{cls:'admin-chart'});
-  adminState.otdel.forEach(r => bars.append(el('div',{cls:'bar-row'},
-    el('div',{cls:'bar-label'}, r.otdel),
-    el('div',{cls:'bar-track'}, el('div',{cls:'bar-fill', css:`width:${Math.max(3, (r.voznagr || 0) / max * 100)}%`})),
-    el('div',{}, fmtMoney(r.voznagr))
-  )));
-  chart.append(bars);
-  root.append(chart);
-  const tableCard = card('Сотрудники');
-  const table = el('table',{cls:'admin-table'});
-  table.append(el('thead',{}, el('tr',{}, el('th',{},'ФИО'), el('th',{},'Отдел'), el('th',{},'Встреч'), el('th',{},'Σ вознагр.'), el('th',{},'Σ БС'))));
-  const tb = el('tbody',{});
-  adminState.rows.forEach(r => tb.append(el('tr',{on:()=>openEmployee(r)},
-    el('td',{},r.fio), el('td',{},r.otdel), el('td',{},String(r.vsego_vstrech || 0)), el('td',{},fmtMoney(r.summa_voznagr)), el('td',{},String(r.summa_bs || 0))
-  )));
-  table.append(tb);
-  tableCard.append(el('div',{cls:'table-scroll'}, table));
-  root.append(tableCard);
-  if (adminState.detail) {
-    const d = card(`Встречи: ${adminState.detail.sotrudnik.fio}`);
-    const list = el('div',{cls:'detail-list'});
-    if (!adminState.detail.vstrechi.length) list.append(el('div',{cls:'empty'},'За выбранный период встреч нет'));
-    adminState.detail.vstrechi.forEach(m => list.append(el('div',{cls:'detail-item'},
-      el('div',{cls:'detail-top'}, el('span',{},m.clientName || m.klient || 'Клиент'), el('span',{},fmtMoney(m.AV || m.av))),
-      el('div',{cls:'detail-sub'},`${m.date || m.data_vstrechi || ''} · ${m.primaryType || m.primary_type || '—'}`)
-    )));
-    d.append(list);
-    root.append(d);
+
+  if (offlineMode || !adminState.products) {
+    root.append(card('Отчёт', el('div',{cls:'empty'}, offlineMode ? 'Локальный режим — отчёт недоступен' : 'Загрузка…')));
+    return root;
   }
+
+  const data = adminState.products;
+  const reportCard = card(`Отчёт за ${adminState.month}`);
+
+  // Header row: counts per day
+  const headerStat = el('div',{cls:'admin-day-stat'});
+  data.days.forEach(d => {
+    headerStat.append(el('div',{cls:'admin-day-cell' + (d.count ? ' has' : '')},
+      el('div',{cls:'admin-day-num'}, fmtDayHeader(d.date)),
+      el('div',{cls:'admin-day-count'}, String(d.count))
+    ));
+  });
+  reportCard.append(el('div',{cls:'admin-day-stat-wrap'},
+    el('div',{cls:'admin-day-stat-title'}, `Встреч за месяц: ${data.totalMeetings}`),
+    headerStat
+  ));
+
+  // Main table: rows = products, cols = days + month + %
+  const tableScroll = el('div',{cls:'admin-products-scroll'});
+  const table = el('table',{cls:'admin-products'});
+  const thead = el('thead',{});
+  const headRow = el('tr',{});
+  headRow.append(el('th',{cls:'sticky-col'}, 'Показатель'));
+  data.days.forEach(d => headRow.append(el('th',{cls:'col-day'}, fmtDayHeader(d.date))));
+  headRow.append(el('th',{cls:'col-month'},'Месяц'));
+  headRow.append(el('th',{cls:'col-pct'},'Целевые'));
+  thead.append(headRow);
+  table.append(thead);
+
+  const tbody = el('tbody',{});
+  data.rows.forEach(row => {
+    const tr = el('tr',{cls: (row.bold ? 'row-bold' : '') + (row.group ? ' row-group' : '')});
+    tr.append(el('td',{cls:'sticky-col'}, row.name));
+    row.days.forEach(v => tr.append(el('td',{cls: 'cell-num' + (v ? ' has' : ' zero')}, v ? String(v) : '0')));
+    tr.append(el('td',{cls:'cell-num cell-month'}, String(row.month)));
+    tr.append(el('td',{cls:'cell-pct'}, fmtPct(row.percent)));
+    tbody.append(tr);
+  });
+  table.append(tbody);
+  tableScroll.append(table);
+  reportCard.append(tableScroll);
+  root.append(reportCard);
   return root;
 }
 
