@@ -959,68 +959,87 @@ function safeSheetName(fio) {
   return `${f || 'Сотрудник'} ${i ? i[0] + '.' : ''}`.replace(/[\\/*?:[\]]/g, '').slice(0, 31);
 }
 
+function fmtDayShort(dateKey) {
+  const [, m, d] = dateKey.split('-');
+  return `${d}.${m}`;
+}
+
 app.get('/api/admin/export/xlsx', authRequired, adminOnly, async (req, res, next) => {
   try {
-    const rows = detailRows(req.query);
+    let from = req.query.from;
+    let to = req.query.to;
+    if (!from || !to) {
+      const month = String(req.query.month || new Date().toISOString().slice(0, 7));
+      const days = buildDayList(month);
+      from = days[0];
+      to = days[days.length - 1];
+    }
+    const report = buildProductReport(from, to);
+
     const wb = new ExcelJS.Workbook();
     wb.creator = 'Alfa Tracker';
     wb.created = new Date();
+    const ws = wb.addWorksheet('Отчёт по продуктам');
 
-    const summary = db.prepare(`
-      SELECT s.otdel, s.fio, s.dolzhnost, COUNT(v.id_vstrechi) AS count,
-             ROUND(COALESCE(SUM(v.av),0), 2) AS av, ROUND(COALESCE(SUM(v.aa),0), 2) AS aa
-      FROM sotrudniki s
-      LEFT JOIN vstrechi v ON v.id_sotrudnika = s.id_sotrudnika
-        ${req.query.from ? 'AND v.data_vstrechi >= @from' : ''}
-        ${req.query.to ? 'AND v.data_vstrechi <= @to' : ''}
-        ${req.query.fio_id ? 'AND v.id_sotrudnika = @fio_id' : ''}
-      WHERE COALESCE(s.active, 1) = 1
-      GROUP BY s.id_sotrudnika
-      ORDER BY av DESC, s.fio
-    `).all({ from: req.query.from, to: req.query.to, fio_id: req.query.fio_id });
+    const dayCount = report.days.length;
+    const lastDayCol = 1 + dayCount;
+    const monthCol = lastDayCol + 1;
+    const pctCol = monthCol + 1;
 
-    const ws1 = wb.addWorksheet('Сводка');
-    ws1.columns = [
-      { header: 'Отдел', key: 'otdel' }, { header: 'ФИО', key: 'fio' }, { header: 'Должность', key: 'dolzhnost' },
-      { header: 'Встреч за период', key: 'count' }, { header: 'Сумма вознаграждения', key: 'av' }, { header: 'Сумма БС', key: 'aa' }
-    ];
-    summary.forEach(r => ws1.addRow(r));
-    appendTotalRow(ws1, ['Итого', '', '', summary.reduce((s, r) => s + r.count, 0), summary.reduce((s, r) => s + r.av, 0), summary.reduce((s, r) => s + r.aa, 0)]);
-    setWorksheetStyle(ws1, [5, 6]);
+    const headerDays = report.days.map(d => fmtDayShort(d.date));
+    ws.addRow(['Дата', ...headerDays, 'Месяц', 'Целевые']);
+    ws.addRow(['Встреч', ...report.days.map(d => d.count), report.totalMeetings, '']);
 
-    const byDept = db.prepare(`
-      SELECT s.otdel, COUNT(v.id_vstrechi) AS count, ROUND(COALESCE(SUM(v.av),0), 2) AS av
-      FROM sotrudniki s
-      LEFT JOIN vstrechi v ON v.id_sotrudnika = s.id_sotrudnika
-        ${req.query.from ? 'AND v.data_vstrechi >= @from' : ''}
-        ${req.query.to ? 'AND v.data_vstrechi <= @to' : ''}
-        ${req.query.fio_id ? 'AND v.id_sotrudnika = @fio_id' : ''}
-      WHERE COALESCE(s.active, 1) = 1
-      GROUP BY s.otdel
-      ORDER BY av DESC
-    `).all({ from: req.query.from, to: req.query.to, fio_id: req.query.fio_id });
-    const ws2 = wb.addWorksheet('По отделам');
-    ws2.columns = [{ header: 'Отдел', key: 'otdel' }, { header: 'Встреч', key: 'count' }, { header: 'Сумма вознаграждения', key: 'av' }];
-    byDept.forEach(r => ws2.addRow(r));
-    setWorksheetStyle(ws2, [3]);
+    report.rows.forEach(row => {
+      const r = ws.addRow([
+        row.name,
+        ...row.days,
+        row.month,
+        row.percent != null ? row.percent : ''
+      ]);
+      if (row.bold) r.font = { bold: true };
+      if (row.bold) {
+        r.eachCell(cell => {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE5E3' } };
+        });
+      } else if (row.group) {
+        r.eachCell(cell => {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF7E6' } };
+        });
+        r.font = { bold: true };
+      }
+      const pctCell = r.getCell(pctCol);
+      pctCell.numFmt = '0.00%';
+      pctCell.font = { color: { argb: 'FFEF3124' }, bold: true };
+      r.getCell(monthCol).font = Object.assign({}, r.getCell(monthCol).font, { bold: true });
+    });
 
-    const detailCols = [
-      ['Дата', 'data_vstrechi'], ['ФИО', 'fio'], ['Отдел', 'otdel'], ['Клиент', 'klient'], ['Тип', 'primary_type'], ['Тип встречи', 'aw'],
-      ['F', 'f'], ['G', 'g'], ['H', 'h'], ['I', 'i'], ['J', 'j'], ['K', 'k'], ['L', 'l'], ['E', 'e'], ['O', 'o'], ['P', 'p'], ['AA', 'aa'], ['AK', 'ak'], ['AV', 'av']
-    ];
-    const fillDetails = (ws, list) => {
-      ws.columns = detailCols.map(([header, key]) => ({ header, key }));
-      list.forEach(r => ws.addRow(r));
-      setWorksheetStyle(ws, [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]);
-    };
-    fillDetails(wb.addWorksheet('Детализация'), rows);
-    if (req.query.fio_id && rows[0]) fillDetails(wb.addWorksheet(safeSheetName(rows[0].fio)), rows);
+    ws.getRow(1).eachCell(cell => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF3124' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    });
+    ws.getRow(2).eachCell(cell => {
+      cell.font = { bold: true };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F6' } };
+      cell.alignment = { horizontal: 'center' };
+    });
+    ws.getRow(1).getCell(monthCol).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC81E1E' } };
+    ws.getRow(1).getCell(pctCol).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF8B0000' } };
 
-    audit(req.user.id, 'export_xlsx', { from: req.query.from, to: req.query.to, fio_id: req.query.fio_id, rows: rows.length });
+    ws.getColumn(1).width = 32;
+    for (let c = 2; c <= lastDayCol; c += 1) ws.getColumn(c).width = 7;
+    ws.getColumn(monthCol).width = 9;
+    ws.getColumn(pctCol).width = 11;
+
+    ws.views = [{ state: 'frozen', xSplit: 1, ySplit: 2 }];
+
+    audit(req.user.id, 'export_xlsx', { from, to, days: dayCount, products: report.rows.length });
+
     const now = new Date();
     const stamp = `${now.toISOString().slice(0, 10)}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="alfa-tracker_${stamp}.xlsx"`);
+    res.setHeader('Content-Disposition', `attachment; filename="alfa-report_${from}_${to}_${stamp}.xlsx"`);
     await wb.xlsx.write(res);
     res.end();
   } catch (err) {
