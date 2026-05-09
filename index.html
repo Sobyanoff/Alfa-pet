@@ -522,7 +522,8 @@
       border: 1.5px solid var(--border);
       border-radius: var(--r-btn-sm);
       padding: 13px 12px;
-      font: inherit;
+      font-family: inherit;
+      font-size: 16px; /* iOS Safari не зумит при tap, если ≥16px */
       background: #fff;
       color: var(--ink);
       outline: none;
